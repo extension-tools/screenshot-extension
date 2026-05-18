@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apple Values Three Card Carousel Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .hero {
+      min-height: 720px;
+      padding: 96px 72px;
+      background: #fff;
+    }
+
+    .hero h1 {
+      margin: 0 0 24px;
+      font-size: 72px;
+      line-height: 1.04;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 0;
+      color: #6e6e73;
+      font-size: 24px;
+      line-height: 1.35;
+    }
+
+    .values {
+      min-height: 980px;
+      padding: 72px;
+      background: #f5f5f7;
+    }
+
+    .values h2 {
+      margin: 0 0 48px;
+      font-size: 56px;
+      line-height: 1.08;
+    }
+
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 32px;
+      overflow: visible;
+    }
+
+    .value-card {
+      min-height: 420px;
+      padding: 36px;
+      border-radius: 28px;
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    }
+
+    .value-card h3 {
+      margin: 0 0 18px;
+      font-size: 34px;
+      line-height: 1.12;
+    }
+
+    .value-card p {
+      margin: 0;
+      color: #424245;
+      font-size: 20px;
+      line-height: 1.4;
+    }
+
+    .marker {
+      height: 88px;
+      margin-top: 32px;
+      border-radius: 18px;
+    }
+
+    .left-marker {
+      background: rgb(35, 120, 255);
+    }
+
+    .middle-marker {
+      background: rgb(245, 120, 40);
+    }
+
+    .right-marker {
+      background: rgb(20, 180, 120);
+    }
+
+    .benefits {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      max-width: 980px;
+      margin: 120px auto 0;
+      padding-top: 56px;
+      border-top: 1px solid #d2d2d7;
+      text-align: center;
+    }
+
+    .benefits strong {
+      display: block;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+
+    .benefit-marker {
+      height: 72px;
+      border-radius: 16px;
+      background: rgb(80, 120, 255);
+    }
+
+    .footnotes {
+      min-height: 360px;
+      padding: 32px 72px;
+      color: #6e6e73;
+      background: #f5f5f7;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>MacBook Air</h1>
+    <p>
+      Preceding product content creates a realistic scroll position before an
+      Apple-style values carousel. The capture must preserve each card in the
+      row, including the middle privacy card.
+    </p>
+  </section>
+
+  <section class="values" aria-label="Our values">
+    <h2>Our values lead the way.</h2>
+    <div class="values-grid" role="list">
+      <article class="value-card" role="listitem">
+        <h3>A plan as innovative as our products.</h3>
+        <p>Committed to carbon neutrality across the entire footprint.</p>
+        <div class="marker left-marker" aria-hidden="true"></div>
+      </article>
+
+      <article class="value-card privacy-card" role="listitem">
+        <h3>Privacy. That's Apple.</h3>
+        <p>Every product and service is designed to keep your data safe and secure.</p>
+        <div class="marker middle-marker" aria-hidden="true"></div>
+      </article>
+
+      <article class="value-card" role="listitem">
+        <h3>Innovation that's accessible by design.</h3>
+        <p>Built-in features help everyone do what they love.</p>
+        <div class="marker right-marker" aria-hidden="true"></div>
+      </article>
+    </div>
+
+    <div class="benefits" aria-label="Buying benefits">
+      <div>
+        <strong>Pay monthly at 0% APR</strong>
+        <div class="benefit-marker" aria-hidden="true"></div>
+      </div>
+      <div>
+        <strong>Fast delivery or pickup</strong>
+        <div class="benefit-marker" aria-hidden="true"></div>
+      </div>
+      <div>
+        <strong>Get help buying</strong>
+        <div class="benefit-marker" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="footnotes">
+    <p>
+      Footnote text below the cards makes the lower section part of the capture
+      and guards against a split that preserves the outer cards while losing the
+      middle card.
+    </p>
+  </section>
+</body>
+</html>

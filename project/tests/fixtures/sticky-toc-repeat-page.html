@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sticky TOC Repeat Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      width: 18px;
+      background: rgb(230, 0, 0);
+    }
+
+    body {
+      margin: 0;
+      color: #1f2937;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 96px;
+      padding: 24px 72px;
+      color: #ffffff;
+      background: rgb(23, 180, 145);
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 180px 180px minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 56px 32px 120px;
+    }
+
+    .brand {
+      position: sticky;
+      top: 128px;
+      align-self: start;
+      height: 132px;
+      width: 160px;
+      padding: 42px 26px;
+      color: #ffffff;
+      background: rgb(130, 90, 255);
+      border-radius: 16px;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .toc {
+      position: sticky;
+      top: 128px;
+      align-self: start;
+      min-height: 320px;
+      width: 180px;
+      padding: 24px;
+      background: rgb(255, 174, 30);
+      border-radius: 16px;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    article {
+      background: #ffffff;
+    }
+
+    section {
+      min-height: 620px;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 0 48px;
+    }
+
+    section h2 {
+      font-size: 34px;
+      margin: 0 0 24px;
+    }
+
+    section p {
+      font-size: 20px;
+      margin: 0 0 18px;
+    }
+
+    .deep-marker {
+      height: 110px;
+      margin: 36px 0;
+      background: rgb(40, 120, 255);
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>FastAPI-like Docs Header</header>
+  <div class="layout">
+    <aside class="brand">FastAPI</aside>
+    <article>
+      <section>
+        <h2>Installation</h2>
+        <p>This fixture mimics documentation pages with sticky branding and a sticky table of contents.</p>
+        <p>The top header, left brand, and right TOC should be present near the top but not repeated every tile.</p>
+      </section>
+      <section>
+        <h2>Example</h2>
+        <p>Repeated sticky regions are represented by exact marker colors so the harness can count rows.</p>
+        <p>Scrollbars are painted red by CSS and should be hidden by capture-time page mutation.</p>
+      </section>
+      <section>
+        <h2>Interactive API Docs</h2>
+        <div class="deep-marker"></div>
+        <p>The blue marker proves that deep body content is still captured after sticky normalization.</p>
+      </section>
+      <section>
+        <h2>Deployment</h2>
+        <p>Final section content keeps the page long enough to require several capture frames.</p>
+      </section>
+    </article>
+  </div>
+  <aside class="toc">
+    <p>Table of contents</p>
+    <p>Installation</p>
+    <p>Example</p>
+    <p>Interactive API Docs</p>
+    <p>Deployment</p>
+  </aside>
+</body>
+</html>

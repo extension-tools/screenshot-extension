@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cookie Strip Repeat Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #172033;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffffff;
+    }
+
+    header {
+      height: 88px;
+      padding: 28px 72px;
+      color: #ffffff;
+      background: #16213e;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    section {
+      min-height: 780px;
+      padding: 72px;
+      border-bottom: 1px solid #d8dee8;
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 18px;
+      font-size: 40px;
+    }
+
+    p {
+      max-width: 780px;
+      font-size: 21px;
+      line-height: 1.7;
+    }
+
+    .cookie-strip {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      min-height: 92px;
+      padding: 26px 72px;
+      color: #001829;
+      background: rgb(0, 180, 255);
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <header>Docs With Cookie Strip</header>
+  <section>
+    <h1>First Viewport</h1>
+    <p>The cookie strip is visible at capture start and should be preserved only in the first viewport.</p>
+  </section>
+  <section>
+    <h2>Second Section</h2>
+    <p>Repeated fixed cookie strips on later stitched frames are a visual regression.</p>
+  </section>
+  <section>
+    <h2>Third Section</h2>
+    <p>The page remains long enough to require multiple capture frames.</p>
+  </section>
+  <section>
+    <h2>Final Section</h2>
+    <p>The final content proves the fixed strip did not prevent the page from reaching the bottom.</p>
+  </section>
+  <aside class="cookie-strip">Cookie preferences stay visible in the first frame only.</aside>
+</body>
+</html>

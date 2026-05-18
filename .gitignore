@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Local build/minified output
+minified-code/
+
+# Test and QA generated artifacts
+project/.cache/
+project/tests/capture-results/
+project/tests/diagnostic-crops/
+project/tests/visual-results/
+
+# Screenshot review generated artifacts.
+# Keep only the handoff/readme structure, not run outputs or PNG artifacts.
+Screenshots-for-Review/*
+!Screenshots-for-Review/README.md
+!Screenshots-for-Review/For-Codex/
+Screenshots-for-Review/For-Codex/*
+!Screenshots-for-Review/For-Codex/incoming/
+!Screenshots-for-Review/For-Codex/reviewed/
+Screenshots-for-Review/For-Codex/incoming/*
+Screenshots-for-Review/For-Codex/reviewed/*
+!Screenshots-for-Review/For-Codex/incoming/.gitkeep
+!Screenshots-for-Review/For-Codex/reviewed/.gitkeep
+
+# Local machine files
+.DS_Store
+
+# Secrets and packaged extension artifacts
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.crt
+*.cer
+*.crx
+*.zip

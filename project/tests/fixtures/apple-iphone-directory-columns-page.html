@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apple iPhone Directory Columns Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #1d1d1f;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+    }
+
+    .top {
+      min-height: 820px;
+      padding: 96px 72px;
+      background: #ffffff;
+    }
+
+    .top h1 {
+      margin: 0 0 24px;
+      font-size: 76px;
+      line-height: 1.04;
+    }
+
+    .long-content {
+      min-height: 1280px;
+      padding: 72px;
+      background: #f5f5f7;
+      font-size: 24px;
+      line-height: 1.45;
+      color: #6e6e73;
+    }
+
+    .directory {
+      min-height: 860px;
+      padding: 96px 72px;
+      background: #f5f5f7;
+    }
+
+    .directory h2 {
+      margin: 0 0 80px;
+      font-size: 76px;
+      line-height: 1.04;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 76px;
+      min-height: 460px;
+    }
+
+    .placeholder {
+      min-height: 340px;
+      border-radius: 24px;
+      background: #f5f5f7;
+    }
+
+    .directory-column {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    body.directory-ready .directory-column {
+      animation: directoryReveal 120ms ease-out forwards;
+    }
+
+    @keyframes directoryReveal {
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .directory-column h3 {
+      margin: 0 0 24px;
+      color: #6e6e73;
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .directory-column a {
+      display: block;
+      margin: 0 0 20px;
+      color: #1d1d1f;
+      font-size: 28px;
+      line-height: 1.18;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .column-marker {
+      height: 96px;
+      margin-top: 32px;
+      border-radius: 18px;
+    }
+
+    .explore-marker {
+      background: rgb(20, 180, 120);
+    }
+
+    .shop-marker {
+      background: rgb(255, 170, 20);
+    }
+
+    .more-marker {
+      background: rgb(80, 120, 255);
+    }
+  </style>
+</head>
+<body>
+  <section class="top">
+    <h1>iPhone</h1>
+    <p>Top page content precedes a late directory-style section.</p>
+  </section>
+
+  <section class="long-content">
+    The lower iPhone directory models the Apple page state where the captured
+    output showed only the iPhone heading while the live page had three populated
+    navigation columns. The columns appear when the section is near the viewport.
+  </section>
+
+  <section class="directory" id="iphone-directory" aria-label="iPhone directory">
+    <h2>iPhone</h2>
+    <div class="columns" id="directory-columns" aria-live="polite">
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+    </div>
+  </section>
+
+  <script>
+    const directory = document.getElementById('iphone-directory');
+    const columns = document.getElementById('directory-columns');
+    let loaded = false;
+
+    const loadDirectory = () => {
+      if (loaded) {
+        return;
+      }
+
+      loaded = true;
+      setTimeout(() => {
+        document.body.classList.add('directory-ready');
+        columns.innerHTML = `
+          <nav class="directory-column" aria-label="Explore iPhone">
+            <h3>Explore iPhone</h3>
+            <a href="/iphone/">Explore All iPhone</a>
+            <a href="/iphone-17-pro/">iPhone 17 Pro</a>
+            <a href="/iphone-air/">iPhone Air</a>
+            <a href="/iphone-17/">iPhone 17</a>
+            <a href="/iphone-16/">iPhone 16</a>
+            <div class="column-marker explore-marker"></div>
+          </nav>
+          <nav class="directory-column" aria-label="Shop iPhone">
+            <h3>Shop iPhone</h3>
+            <a href="/us/shop/goto/buy_iphone">Shop iPhone</a>
+            <a href="/us/shop/goto/iphone/accessories">iPhone Accessories</a>
+            <a href="/us/shop/goto/trade_in">Apple Trade In</a>
+            <a href="/us/shop/goto/payment_plan">Financing</a>
+            <div class="column-marker shop-marker"></div>
+          </nav>
+          <nav class="directory-column" aria-label="More from iPhone">
+            <h3>More from iPhone</h3>
+            <a href="/support/iphone/">iPhone Support</a>
+            <a href="/support/products/iphone/">AppleCare</a>
+            <a href="/ios/">iOS 26</a>
+            <a href="/privacy/">iPhone Privacy</a>
+            <div class="column-marker more-marker"></div>
+          </nav>
+        `;
+      }, 180);
+    };
+
+    const checkDirectory = () => {
+      const rect = directory.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 260) {
+        loadDirectory();
+      }
+    };
+
+    window.addEventListener('scroll', checkDirectory, {passive: true});
+    window.addEventListener('resize', checkDirectory);
+    checkDirectory();
+  </script>
+</body>
+</html>

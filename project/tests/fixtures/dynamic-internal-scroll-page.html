@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dynamic Internal Scroll Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: #102033;
+      background: #17233d;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: 76px minmax(0, 1fr);
+      width: 100vw;
+      height: 100vh;
+    }
+
+    header {
+      padding: 20px 36px;
+      color: white;
+      background: #233f70;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    aside {
+      padding: 24px;
+      color: white;
+      background: #314466;
+    }
+
+    .scroll-container {
+      min-height: 0;
+      overflow: auto;
+      background: #f5f7fb;
+    }
+
+    .message-list {
+      display: grid;
+      gap: 24px;
+      min-height: 1700px;
+      padding: 32px;
+    }
+
+    .message {
+      min-height: 500px;
+      padding: 28px;
+      border: 4px solid #1c3157;
+      background: white;
+    }
+
+    .dynamic-tail {
+      min-height: 620px;
+      padding: 32px;
+      border: 8px solid #111827;
+      background: rgb(90, 80, 255);
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <h1>Dynamic Internal Scroll Fixture</h1>
+    </header>
+    <div class="workspace">
+      <aside>
+        <p>Static app chrome</p>
+        <p>The central pane grows after scroll warmup.</p>
+      </aside>
+      <main id="scroll-container" class="scroll-container">
+        <div id="message-list" class="message-list">
+          <section class="message">
+            <h2>Message One</h2>
+            <p>Initial internal scroll content.</p>
+          </section>
+          <section class="message">
+            <h2>Message Two</h2>
+            <p>Warmup should scroll through this region.</p>
+          </section>
+          <section class="message">
+            <h2>Message Three</h2>
+            <p>More content appears when the capture engine reaches the lower part of the pane.</p>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>
+    const container = document.getElementById('scroll-container');
+    const list = document.getElementById('message-list');
+    let appended = false;
+
+    container.addEventListener('scroll', () => {
+      if (appended || container.scrollTop < 650) {
+        return;
+      }
+
+      appended = true;
+      const tail = document.createElement('section');
+      tail.className = 'dynamic-tail';
+      tail.textContent = 'Dynamic internal scroll tail';
+      list.appendChild(tail);
+    });
+  </script>
+</body>
+</html>

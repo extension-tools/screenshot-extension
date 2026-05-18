@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Missing Middle Content Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #111827;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffffff;
+    }
+
+    section {
+      min-height: 760px;
+      padding: 80px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 22px;
+      font-size: 44px;
+    }
+
+    p {
+      max-width: 860px;
+      font-size: 22px;
+      line-height: 1.7;
+    }
+
+    .middle-marker,
+    .lower-marker {
+      height: 128px;
+      margin-top: 48px;
+      border-radius: 8px;
+    }
+
+    .middle-marker {
+      background: rgb(245, 120, 40);
+    }
+
+    .lower-marker {
+      background: rgb(80, 90, 255);
+    }
+  </style>
+</head>
+<body>
+  <section>
+    <h1>Top Content</h1>
+    <p>The screenshot must include the whole content path, not only the first and final parts.</p>
+  </section>
+  <section>
+    <h2>Middle Content</h2>
+    <p>The orange marker catches missing middle sections and black-strip substitution artifacts.</p>
+    <div class="middle-marker"></div>
+  </section>
+  <section>
+    <h2>Lower Content</h2>
+    <p>The blue marker catches lower-page omissions after scroll-settle or dynamic layout shifts.</p>
+    <div class="lower-marker"></div>
+  </section>
+</body>
+</html>

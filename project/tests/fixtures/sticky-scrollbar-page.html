@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sticky Scrollbar Page Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      color: #122033;
+      background: #f5f7fb;
+    }
+
+    .fixed-header {
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 72px;
+      background: rgb(255, 0, 200);
+    }
+
+    .fixed-cookie {
+      position: fixed;
+      z-index: 1000;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 72px;
+      background: rgb(0, 229, 255);
+    }
+
+    .hero {
+      min-height: 170px;
+      padding: 96px 48px 24px;
+      color: white;
+      background: #172b4d;
+    }
+
+    .sticky-nav {
+      position: sticky;
+      z-index: 900;
+      top: 80px;
+      height: 48px;
+      background: rgb(255, 230, 0);
+      border-top: 4px solid #111;
+      border-bottom: 4px solid #111;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 460px;
+      gap: 32px;
+      padding: 32px 48px 140px;
+    }
+
+    .content {
+      display: grid;
+      gap: 32px;
+    }
+
+    section {
+      min-height: 520px;
+      padding: 28px;
+      border: 4px solid #243b6b;
+      background: white;
+    }
+
+    section:nth-child(2) {
+      background: #e7f9f6;
+    }
+
+    section:nth-child(3) {
+      background: #fff4cf;
+    }
+
+    section:nth-child(4) {
+      background: #efe7ff;
+    }
+
+    .internal-scroll-panel {
+      align-self: start;
+      height: 760px;
+      overflow: auto;
+      border: 8px solid #1a2b4a;
+      background: #ffffff;
+    }
+
+    .internal-scroll-panel::-webkit-scrollbar {
+      width: 22px;
+      height: 22px;
+      background: rgb(255, 26, 26);
+    }
+
+    .internal-scroll-panel::-webkit-scrollbar-thumb {
+      background: rgb(17, 17, 255);
+    }
+
+    .panel-content {
+      min-height: 1450px;
+      padding: 28px;
+      background: linear-gradient(#ffffff, #d8f0ff);
+    }
+
+    h1,
+    h2,
+    p {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="fixed-header"></div>
+  <div class="fixed-cookie"></div>
+
+  <div class="hero">
+    <h1>Sticky Scrollbar Page Fixture</h1>
+    <p>This page makes fixed, sticky, and internal scrollbar regressions visually obvious.</p>
+  </div>
+
+  <div class="sticky-nav"></div>
+
+  <main class="layout">
+    <div class="content">
+      <section>
+        <h2>Section One</h2>
+        <p>The fixed header should appear once at the top of the stitched image.</p>
+      </section>
+      <section>
+        <h2>Section Two</h2>
+        <p>The sticky yellow nav should not repeat at every scroll step.</p>
+      </section>
+      <section>
+        <h2>Section Three</h2>
+        <p>The cyan cookie banner should not repeat near every tile boundary.</p>
+      </section>
+      <section>
+        <h2>Section Four</h2>
+        <p>The capture should still include content below multiple viewport heights.</p>
+      </section>
+    </div>
+
+    <aside class="internal-scroll-panel">
+      <div class="panel-content">
+        <h2>Internal Scroll Panel</h2>
+        <p>The red track and blue thumb are fixture markers. The capture pipeline should hide this scrollbar before viewport capture.</p>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>

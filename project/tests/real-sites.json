@@ -1,0 +1,1752 @@
+{
+  "viewport": {
+    "width": 1365,
+    "height": 900
+  },
+  "sites": [
+    {
+      "name": "Wikipedia Taylor Swift",
+      "url": "https://en.wikipedia.org/wiki/Taylor_Swift",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the article page.",
+      "verify": "Full-page capture is taller than viewport, article content is not blank, table/sidebar layout is not obviously broken.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "MDN Web API",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the MDN Web API documentation page.",
+      "verify": "Full-page capture includes long documentation content and navigation without obvious sticky repetition.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1800,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "split-boundary-text",
+          "docs-sidebar-main-scroll"
+        ]
+      }
+    },
+    {
+      "name": "React Learn",
+      "url": "https://react.dev/learn",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the React Learn documentation page.",
+      "verify": "Long documentation content, code blocks, and navigation remain readable without repeated sticky header artifacts.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1800,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Next.js Docs",
+      "url": "https://nextjs.org/docs",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Next.js docs landing page.",
+      "verify": "Docs layout with navigation/sidebar is captured without obvious missing content or sticky repetition.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "docs-sidebar-main-scroll",
+          "repeated-sidebar"
+        ]
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/next-js-docs.png",
+        "usage": "Use before closing Next.js docs sidebar/main-scroll regressions or when this site lands in Look-first/Unstable after engine changes."
+      }
+    },
+    {
+      "name": "web.dev Articles",
+      "url": "https://web.dev/articles",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the web.dev articles index.",
+      "verify": "Article/card grid previews load; gray lazy placeholders are not acceptable for beta.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Chrome Developers Blog",
+      "url": "https://developer.chrome.com/blog",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Chrome Developers blog index.",
+      "verify": "Blog card grid, previews, and long content are captured without gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "GitHub Blog",
+      "url": "https://github.blog/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the GitHub Blog homepage.",
+      "verify": "Blog feed and image previews are captured without blank sections or repeated sticky surfaces.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Stripe Docs",
+      "url": "https://docs.stripe.com/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Stripe documentation homepage.",
+      "verify": "Docs navigation, content sections, and sticky surfaces are captured cleanly.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "repeated-overlay"
+        ]
+      }
+    },
+    {
+      "name": "Apple iPhone",
+      "url": "https://www.apple.com/iphone/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the Apple iPhone product page.",
+      "verify": "Large marketing/product sections are captured without blank media blocks or broken sticky nav.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "split-boundary-text",
+          "missing-content"
+        ]
+      }
+    },
+    {
+      "name": "Apple MacBook Air",
+      "url": "https://www.apple.com/macbook-air/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the Apple MacBook Air product page.",
+      "verify": "Product hero, long visual sections, and sticky navigation are captured without duplicated fixed elements.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "split-boundary-text",
+          "missing-content"
+        ]
+      }
+    },
+    {
+      "name": "Samsung Galaxy S",
+      "url": "https://www.samsung.com/us/smartphones/galaxy-s/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the Samsung Galaxy S product category page.",
+      "verify": "Product cards and rich media sections capture without gray image placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "seam-band",
+          "split-boundary-text"
+        ]
+      }
+    },
+    {
+      "name": "LEGO Millennium Falcon",
+      "url": "https://www.lego.com/en-us/product/millennium-falcon-75192",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the LEGO product detail page.",
+      "verify": "Product gallery, details, and purchase surfaces are captured without duplicated sticky bars.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "blocking-popup"
+        ]
+      }
+    },
+    {
+      "name": "Nike Air Force 1",
+      "url": "https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open a Nike product detail page.",
+      "verify": "If a blocking popup prevents normal user scrolling, capture must stop at the first visible viewport; otherwise product imagery, details, and sticky purchase surfaces capture without blank media blocks.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "blocking-popup"
+        ]
+      }
+    },
+    {
+      "name": "Steam Counter-Strike 2",
+      "url": "https://store.steampowered.com/app/730/CounterStrike_2/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the Steam product page.",
+      "verify": "Store/product layout, media blocks, and sticky surfaces are captured without blank PNG output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "REI Backpacks",
+      "url": "https://www.rei.com/c/backpacks",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open an REI product listing page.",
+      "verify": "Product grid, filters, and previews are captured without duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "repeated-overlay",
+          "seam-band",
+          "product-filter-panel",
+          "repeated-sidebar",
+          "split-boundary-text"
+        ]
+      }
+    },
+    {
+      "name": "SVGOMG",
+      "url": "https://jakearchibald.github.io/svgomg/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public SVGOMG optimizer app shell.",
+      "verify": "App-shell UI captures without blank output and includes visible controls/top chrome without login or cookie consent prerequisites.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Figma Community",
+      "url": "https://www.figma.com/community",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open Figma Community landing/explore page.",
+      "verify": "Media-heavy app-like layout captures with visible navigation/header and without gray card previews.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Excalidraw",
+      "url": "https://excalidraw.com/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public Excalidraw app shell.",
+      "verify": "Canvas app shell captures without blank PNG output; visible app chrome/header is included.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Three.js Editor",
+      "url": "https://threejs.org/editor/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public Three.js editor shell.",
+      "verify": "Canvas/editor app shell captures without blank output and includes visible app chrome, toolbar, and side panels.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "StackBlitz Vite Starter",
+      "url": "https://stackblitz.com/edit/vitejs-vite?file=index.html",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open a public StackBlitz editor shell.",
+      "verify": "Editor/sidebar app shell captures with visible navigation/sidebar and without empty PNG output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 6000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Python Docs Tutorial",
+      "url": "https://docs.python.org/3/tutorial/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Python tutorial documentation.",
+      "verify": "Long docs page captures text, code blocks, and navigation without right-crop or repeated sticky UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1800,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Django Docs Overview",
+      "url": "https://docs.djangoproject.com/en/stable/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Django documentation index.",
+      "verify": "Docs index and navigation are captured without missing columns or sticky repetition.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Vue Guide",
+      "url": "https://vuejs.org/guide/introduction.html",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Vue guide introduction.",
+      "verify": "Long docs layout with sidebar and code blocks captures cleanly.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Svelte Docs",
+      "url": "https://svelte.dev/docs/svelte/overview",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Svelte docs overview.",
+      "verify": "Docs layout captures without right-crop, blank regions, or repeated header artifacts.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Tailwind Docs",
+      "url": "https://tailwindcss.com/docs/installation",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Tailwind installation docs.",
+      "verify": "Docs content, sidebar, and code examples remain readable in full-page output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Kubernetes Concepts",
+      "url": "https://kubernetes.io/docs/concepts/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Kubernetes concepts docs.",
+      "verify": "Documentation navigation and article content capture without missing sidebars or sticky duplication.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Docker Docs Get Started",
+      "url": "https://docs.docker.com/get-started/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Docker get started docs.",
+      "verify": "Docs page captures long content and navigation without blank media blocks.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "TypeScript Handbook",
+      "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the TypeScript handbook intro.",
+      "verify": "Docs content and code blocks are captured without right-side clipping.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "docs-sidebar-main-scroll",
+          "repeated-sidebar"
+        ]
+      }
+    },
+    {
+      "name": "Node.js API Docs",
+      "url": "https://nodejs.org/api/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Node.js API docs.",
+      "verify": "Long technical docs capture with readable navigation and no broken PNG output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Vite Guide",
+      "url": "https://vite.dev/guide/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Vite guide.",
+      "verify": "Modern docs page captures headings, cards, and code blocks without layout crop.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Astro Docs",
+      "url": "https://docs.astro.build/en/getting-started/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Astro getting started docs.",
+      "verify": "Docs layout captures sidebar/content without right-crop or repeated sticky surfaces.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2200,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Rust Book",
+      "url": "https://doc.rust-lang.org/book/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open The Rust Programming Language book.",
+      "verify": "Long book-style docs capture text and navigation without missing columns.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1800,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Git SCM Book",
+      "url": "https://git-scm.com/book/en/v2",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the Git book.",
+      "verify": "Book-style page captures long content and side navigation without broken output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 1800,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Cloudflare Blog",
+      "url": "https://blog.cloudflare.com/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Cloudflare blog homepage.",
+      "verify": "Blog cards and media previews capture without gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/cloudflare-blog.png",
+        "usage": "Use when checking Cloudflare blog footer/bottom closure, populated blog cards, and first-state cookie strip behavior."
+      }
+    },
+    {
+      "name": "Shopify Blog",
+      "url": "https://www.shopify.com/blog",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open Shopify blog homepage.",
+      "verify": "Blog grid and preview images capture without missing media or right-crop.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Apple Watch",
+      "url": "https://www.apple.com/watch/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Apple Watch product page.",
+      "verify": "Long product/marketing page captures rich visual sections without blank media blocks.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Google Pixel Phone",
+      "url": "https://store.google.com/category/phones",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Google Store phones category.",
+      "verify": "Product cards and purchase surfaces capture without gray placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Microsoft Surface Pro",
+      "url": "https://www.microsoft.com/en-us/surface/devices/surface-pro-11th-edition",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Microsoft Surface Pro product page.",
+      "verify": "Product hero, specs, and sticky surfaces capture without missing right-side content.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "wide-output",
+          "right-blank-strip"
+        ]
+      }
+    },
+    {
+      "name": "Dell XPS Laptops",
+      "url": "https://www.dell.com/en-us/shop/dell-laptops/scr/laptops/xps",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Dell XPS laptop listing.",
+      "verify": "Product grid/listing captures without blank cards or repeated sticky filters.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Sony WH-1000XM5",
+      "url": "https://electronics.sony.com/audio/headphones/headband/p/wh1000xm5-b",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Sony headphone product page.",
+      "verify": "Product media and details capture without lazy placeholder blocks.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "missing-content",
+          "black-strip",
+          "product-sticky",
+          "repeated-overlay",
+          "seam-band",
+          "split-boundary-text"
+        ]
+      }
+    },
+    {
+      "name": "Nintendo Switch",
+      "url": "https://www.nintendo.com/us/store/products/nintendo-switch-oled-model-white-set-115461/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Nintendo Switch product page.",
+      "verify": "Product details, media, and purchase section capture without broken sticky UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "PlayStation 5",
+      "url": "https://direct.playstation.com/en-us/buy-consoles/playstation5-console-model-group-slim",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open PlayStation 5 product page.",
+      "verify": "Product purchase layout captures without blank media and no right-crop.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Xbox Series X",
+      "url": "https://www.xbox.com/en-US/consoles/xbox-series-x",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Xbox Series X product page.",
+      "verify": "Long marketing/product sections capture cleanly with no repeated sticky artifacts.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "GoPro HERO",
+      "url": "https://gopro.com/en/us/shop/cameras",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open GoPro cameras category.",
+      "verify": "Product cards and rich media sections capture without gray lazy previews.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Garmin Watches",
+      "url": "https://www.garmin.com/en-US/c/wearables-smartwatches/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open Garmin smartwatches listing.",
+      "verify": "Product grid and filters capture without missing media or repeated fixed surfaces.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Diagrams.net App",
+      "url": "https://app.diagrams.net/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public diagrams.net app shell.",
+      "verify": "Canvas/editor shell captures without blank output and includes visible app chrome.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 6000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Mermaid Live Editor",
+      "url": "https://mermaid.live/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open Mermaid Live Editor.",
+      "verify": "Editor/preview app shell captures visible panels and top chrome without empty output.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "app-shell-readiness"
+        ]
+      }
+    },
+    {
+      "name": "JSFiddle",
+      "url": "https://jsfiddle.net/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open JSFiddle editor shell.",
+      "verify": "Multi-pane editor shell captures visible panels, sidebar/header, and no blank PNG.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": false,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "CodePen Pens",
+      "url": "https://codepen.io/pens/public",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open CodePen public pens view.",
+      "verify": "App-like card grid captures media previews and visible navigation without right-crop.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Observable Explore",
+      "url": "https://observablehq.com/explore",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open Observable Explore.",
+      "verify": "App-like grid/list captures cards, navigation, and media previews without gray placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 5000,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Laravel Docs",
+      "url": "https://laravel.com/docs/12.x",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "docs-sidebar-main-scroll",
+          "repeated-sidebar"
+        ]
+      }
+    },
+    {
+      "name": "Rails Guides",
+      "url": "https://guides.rubyonrails.org/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "PostgreSQL Docs",
+      "url": "https://www.postgresql.org/docs/current/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "MongoDB Docs",
+      "url": "https://www.mongodb.com/docs/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "seam-band",
+          "missing-content",
+          "split-boundary-text"
+        ]
+      }
+    },
+    {
+      "name": "Redis Docs",
+      "url": "https://redis.io/docs/latest/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "GraphQL Learn",
+      "url": "https://graphql.org/learn/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Prisma Docs",
+      "url": "https://www.prisma.io/docs",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "docs-sidebar-main-scroll",
+          "repeated-sidebar",
+          "repeated-overlay"
+        ]
+      }
+    },
+    {
+      "name": "Playwright Docs",
+      "url": "https://playwright.dev/docs/intro",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Cypress Docs",
+      "url": "https://docs.cypress.io/app/get-started/why-cypress",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "split-boundary-text",
+          "docs-sidebar-main-scroll"
+        ]
+      }
+    },
+    {
+      "name": "Jest Docs",
+      "url": "https://jestjs.io/docs/getting-started",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Vitest Guide",
+      "url": "https://vitest.dev/guide/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Storybook Docs",
+      "url": "https://storybook.js.org/docs",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "NGINX Docs",
+      "url": "https://nginx.org/en/docs/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Ubuntu Server Docs",
+      "url": "https://documentation.ubuntu.com/server/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "AWS EC2 Docs",
+      "url": "https://docs.aws.amazon.com/ec2/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Google Cloud Docs",
+      "url": "https://cloud.google.com/docs",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Azure Docs",
+      "url": "https://learn.microsoft.com/en-us/azure/?product=popular",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Eleventy Docs",
+      "url": "https://www.11ty.dev/docs/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Hugo Docs",
+      "url": "https://gohugo.io/documentation/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Docusaurus Docs",
+      "url": "https://docusaurus.io/docs",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "FastAPI Docs",
+      "url": "https://fastapi.tiangolo.com/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "split-boundary-text",
+          "docs-sidebar-main-scroll"
+        ]
+      }
+    },
+    {
+      "name": "WordPress Developer Blog",
+      "url": "https://developer.wordpress.org/news/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "W3C Web Accessibility Intro",
+      "url": "https://www.w3.org/WAI/fundamentals/accessibility-intro/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "HTML Standard",
+      "url": "https://html.spec.whatwg.org/multipage/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "CSS-Tricks Articles",
+      "url": "https://css-tricks.com/articles/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Smashing Magazine Articles",
+      "url": "https://www.smashingmagazine.com/articles/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "LogRocket Blog",
+      "url": "https://blog.logrocket.com/",
+      "type": "Docs/Wiki/Blog",
+      "targetSegment": "docs-wiki-blog",
+      "scenario": "Open the public documentation, wiki, or blog page.",
+      "verify": "Long content, navigation, previews, and sticky surfaces are captured without blank sections, right-crop, repeated fixed elements, or gray lazy placeholders.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 2500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Framework Laptop 13",
+      "url": "https://frame.work/products/laptop13-diy-intel-ultra-1",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Tesla Model 3",
+      "url": "https://www.tesla.com/model3",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "DJI Mini 4 Pro",
+      "url": "https://store.dji.com/product/dji-mini-4-pro",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "product-sticky-anti-regression"
+        ]
+      }
+    },
+    {
+      "name": "Bose Headphones",
+      "url": "https://www.bose.com/c/headphones",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Sonos Shop",
+      "url": "https://www.sonos.com/en-us/shop",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Dyson Vacuums",
+      "url": "https://www.dyson.com/vacuum-cleaners",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "repeated-overlay"
+        ]
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/dyson-vacuums.png",
+        "usage": "Use before closing Dyson repeated product nav/search-bar regressions and rich media/footer completeness issues."
+      }
+    },
+    {
+      "name": "Patagonia Jackets",
+      "url": "https://www.patagonia.com/shop/mens/jackets-vests",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      },
+      "deepQa": {
+        "riskTags": [
+          "repeated-sidebar",
+          "product-filter-panel",
+          "repeated-overlay",
+          "split-boundary-text",
+          "seam-band"
+        ]
+      }
+    },
+    {
+      "name": "Allbirds Wool Runners",
+      "url": "https://www.allbirds.com/products/mens-wool-runners",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Adidas Ultraboost",
+      "url": "https://www.adidas.com/us/ultraboost-shoes",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "New Balance Mens Shoes",
+      "url": "https://www.newbalance.com/men/shoes/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Herman Miller Aeron",
+      "url": "https://store.hermanmiller.com/office-chairs-aeron",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Moleskine Notebooks",
+      "url": "https://www.moleskine.com/en-us/shop/notebooks/",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Backcountry Tents",
+      "url": "https://www.backcountry.com/cat/tents",
+      "type": "Ecommerce/Product",
+      "targetSegment": "ecommerce-product",
+      "scenario": "Open the public product or product-listing page.",
+      "verify": "Product imagery, cards, rich media, and sticky purchase/navigation surfaces are captured without blank media blocks, right-crop, or duplicated fixed UI.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 4500,
+      "needsHumanReview": false,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Photopea",
+      "url": "https://www.photopea.com/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Penpot Design",
+      "url": "https://design.penpot.app/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "CyberChef",
+      "url": "https://gchq.github.io/CyberChef/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "JSON Crack Editor",
+      "url": "https://jsoncrack.com/editor",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Squoosh",
+      "url": "https://squoosh.app/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "StackEdit App",
+      "url": "https://stackedit.io/app",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "TypeScript Playground",
+      "url": "https://www.typescriptlang.org/play/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Tailwind Play",
+      "url": "https://play.tailwindcss.com/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "D2 Playground",
+      "url": "https://play.d2lang.com/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    },
+    {
+      "name": "Hoppscotch",
+      "url": "https://hoppscotch.io/",
+      "type": "App-shell",
+      "targetSegment": "app-shell",
+      "scenario": "Open the public app-shell page.",
+      "verify": "Visible app chrome, main content, sidebar/left navigation when present, and top header are captured without blank output, right-crop, or broken internal scrolling.",
+      "waitUntil": "domcontentloaded",
+      "settleMs": 3500,
+      "needsHumanReview": true,
+      "requiresLogin": false,
+      "expect": {
+        "heightGreaterThanViewport": true,
+        "widthAtLeastViewport": true
+      }
+    }
+  ]
+}

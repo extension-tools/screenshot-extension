@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Basic Long Page Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #102033;
+      background: #f7f8fb;
+    }
+
+    header {
+      padding: 32px 48px;
+      color: white;
+      background: #0057ff;
+    }
+
+    main {
+      display: grid;
+      gap: 32px;
+      padding: 40px 48px 80px;
+    }
+
+    section {
+      min-height: 520px;
+      border: 4px solid #0b2d66;
+      border-radius: 12px;
+      padding: 32px;
+      background: white;
+    }
+
+    section:nth-child(2) {
+      background: #fff3b8;
+    }
+
+    section:nth-child(3) {
+      background: #c8f5ef;
+    }
+
+    section:nth-child(4) {
+      background: #eee0ff;
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 16px;
+    }
+
+    .marker {
+      margin-top: 300px;
+      padding: 16px;
+      border-radius: 8px;
+      background: rgba(0, 87, 255, 0.12);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Basic Long Page Fixture</h1>
+    <p>This fixture verifies that the extension captures more than one viewport.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Section One</h2>
+      <p>The capture should include this first section.</p>
+      <div class="marker">Marker A</div>
+    </section>
+    <section>
+      <h2>Section Two</h2>
+      <p>The page is intentionally taller than the default test viewport.</p>
+      <div class="marker">Marker B</div>
+    </section>
+    <section>
+      <h2>Section Three</h2>
+      <p>The downloaded PNG should have a height greater than the viewport.</p>
+      <div class="marker">Marker C</div>
+    </section>
+    <section>
+      <h2>Section Four</h2>
+      <p>This bottom section helps catch single-viewport captures.</p>
+      <div class="marker">Marker D</div>
+    </section>
+  </main>
+</body>
+</html>
+

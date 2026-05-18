@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Right Gray Strip Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #111827;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffffff;
+    }
+
+    section {
+      min-height: 760px;
+      padding: 72px;
+      border-bottom: 1px solid #dbe3ef;
+      background: #ffffff;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px;
+      gap: 32px;
+      align-items: stretch;
+      min-height: 360px;
+    }
+
+    .copy {
+      padding: 40px;
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .right-marker {
+      border-radius: 8px;
+      background: rgb(40, 190, 120);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 24px;
+      font-size: 44px;
+    }
+  </style>
+</head>
+<body>
+  <section>
+    <h1>Full Width Product Page</h1>
+    <div class="row">
+      <div class="copy">The right edge contains real content. A gray strip would be an artifact, not page content.</div>
+      <div class="right-marker"></div>
+    </div>
+  </section>
+  <section>
+    <h2>Second Band</h2>
+    <div class="row">
+      <div class="copy">The marker repeats as page content, while gray artifact color is intentionally absent.</div>
+      <div class="right-marker"></div>
+    </div>
+  </section>
+  <section>
+    <h2>Final Band</h2>
+    <div class="row">
+      <div class="copy">The capture must keep the right side populated through the bottom.</div>
+      <div class="right-marker"></div>
+    </div>
+  </section>
+</body>
+</html>

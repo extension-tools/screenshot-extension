@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apple Global Menu First Frame Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      color: #1d1d1f;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+    }
+
+    .globalnav {
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      padding: 0 72px;
+      color: #1d1d1f;
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid #d2d2d7;
+      font-size: 14px;
+    }
+
+    .globalnav strong {
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .globalnav a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .global-menu-panel {
+      position: fixed;
+      z-index: 999;
+      top: 48px;
+      right: 0;
+      left: 0;
+      min-height: 224px;
+      padding: 30px 120px 32px;
+      color: white;
+      background: rgb(176, 80, 255);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    }
+
+    .menu-columns {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr 1fr;
+      gap: 72px;
+      max-width: 1080px;
+    }
+
+    .menu-column h2 {
+      margin: 0 0 16px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0.78;
+    }
+
+    .menu-column a {
+      display: block;
+      margin: 0 0 10px;
+      color: white;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-decoration: none;
+    }
+
+    .menu-column p {
+      max-width: 320px;
+      margin: 14px 0 0;
+      font-size: 14px;
+      line-height: 1.45;
+      opacity: 0.86;
+    }
+
+    main {
+      padding-top: 318px;
+    }
+
+    .hero {
+      min-height: 620px;
+      padding: 76px 72px;
+      color: #1d1d1f;
+      background: white;
+    }
+
+    .hero h1 {
+      max-width: 860px;
+      margin: 0;
+      font-size: 72px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .section {
+      min-height: 720px;
+      padding: 72px;
+      border-top: 1px solid #d2d2d7;
+      background: #f5f5f7;
+    }
+
+    .section h2 {
+      max-width: 720px;
+      margin: 0 0 28px;
+      font-size: 52px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .deep-marker {
+      width: 360px;
+      height: 96px;
+      margin-top: 340px;
+      border-radius: 24px;
+      background: rgb(20, 180, 120);
+    }
+  </style>
+</head>
+<body>
+  <nav class="globalnav" aria-label="Global">
+    <strong>Apple</strong>
+    <a href="#store">Store</a>
+    <a href="#mac">Mac</a>
+    <a href="#iphone">iPhone</a>
+    <a href="#watch">Watch</a>
+    <a href="#support">Support</a>
+  </nav>
+
+  <nav class="global-menu-panel mega-menu" aria-label="Apple iPhone menu">
+    <div class="menu-columns">
+      <div class="menu-column">
+        <h2>Explore iPhone</h2>
+        <a href="#iphone">Explore All iPhone</a>
+        <a href="#pro">iPhone 17 Pro</a>
+        <a href="#air">iPhone Air</a>
+        <a href="#compare">Compare iPhone</a>
+        <p>This fixture models a large Apple-style global navigation menu that is already open before capture starts.</p>
+      </div>
+      <div class="menu-column">
+        <h2>Shop iPhone</h2>
+        <a href="#shop">Shop iPhone</a>
+        <a href="#accessories">iPhone Accessories</a>
+        <a href="#trade">Apple Trade In</a>
+        <a href="#financing">Carrier Deals at Apple</a>
+      </div>
+      <div class="menu-column">
+        <h2>More from iPhone</h2>
+        <a href="#support">iPhone Support</a>
+        <a href="#applecare">AppleCare</a>
+        <a href="#privacy">iPhone Privacy</a>
+        <a href="#icloud">iCloud+</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <h1>iPhone capture should preserve the open global menu first.</h1>
+    </section>
+    <section class="section">
+      <h2>Only the content should continue below the first viewport.</h2>
+      <p>The open global menu should not repeat after the first frame.</p>
+    </section>
+    <section class="section">
+      <h2>Bottom content still needs to be captured.</h2>
+      <p>If normalization hides too much, this lower marker will disappear.</p>
+      <div class="deep-marker"></div>
+    </section>
+  </main>
+</body>
+</html>

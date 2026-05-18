@@ -1,0 +1,96 @@
+# Screenshot Extension Changelog
+
+## 0.1.0
+
+### Changes
+
+- Created the first Chrome-only MV3 runnable prototype.
+- Renamed the extension to Screenshot Extension.
+- Reduced the popup to a single entire-page capture action.
+- Restored a one-button popup with `Capture entire page`.
+- Removed external editor integration.
+- Removed Firefox and Edge-specific branches.
+- Added original scroll-position restoration after capture.
+- Added visual-regression scripts for site screenshot checks after code changes.
+- Refactored the capture flow into `code/capture/` modules.
+- Added `ContentAgent` and `DomMutationStack` infrastructure for safe page-side capture mutations.
+- Added `FixedStickyNormalizer` v1 to reduce repeated fixed and sticky elements in stitched captures.
+- Added `ScrollbarNormalizer` v1 to hide root page scrollbars during capture.
+- Added `ScrollTargetFinder` and internal-container scrollbar hiding for one dominant scroll container.
+- Added bounded per-frame stabilization before viewport capture.
+- Added a single-canvas size guard for very large pages.
+- Replaced the extension icon set with the new product artwork.
+- Added the first headed extension-level capture-flow smoke test for a basic long page.
+- Refactored capture-flow automation into a multi-case harness with per-case reports and artifacts.
+- Added `sticky-scrollbar-page` capture-flow coverage for fixed/sticky repetition and internal scrollbar hiding.
+- Added `LazyLoadWarmer` v1 with bounded pre-capture scroll warmup.
+- Added `lazy-load-page` capture-flow coverage for scroll-triggered lazy content.
+- Added `huge-page-guard` capture-flow coverage for controlled oversized-page failure without a PNG download.
+- Added `iframe-baseline-page` capture-flow coverage and lightweight iframe diagnostics.
+- Added internal scroll-container capture v1 for one high-confidence app-shell container.
+- Added `internal-scroll-container-page` capture-flow coverage.
+- Added post-warmup remeasure so bounded lazy/internal scroll-height growth is included before capture starts.
+- Relaxed internal scroll target selection for short chat-like pages with only a small hidden bottom range.
+- Added app-shell composition so internal scroll captures keep visible page chrome such as the ChatGPT sidebar.
+- Added `short-chat-internal-scroll-page` capture-flow coverage.
+- Added `dynamic-internal-scroll-page` capture-flow coverage for growing internal scroll panes.
+- Added `CanvasTiler` v1 so very tall pages can download as multiple PNG parts instead of failing the single-canvas guard.
+- Replaced the huge-page controlled-failure capture-flow case with `huge-page-tiling` multi-download coverage.
+- Raised the default lazy warmup budget to 3.5 seconds for better completeness on complex pages.
+- Warm lazy content in the current viewport before scrolling away and wait longer for visible images.
+- Increased per-frame stabilization so visible image previews have more time to decode before capture.
+- Added image readiness diagnostics for real-site QA reports.
+- Added capture-flow coverage for image readiness warmup and broken image diagnostics.
+- Added quota/rate-limit retry around `captureVisibleTab`.
+- Added a centralized `NotificationService` and a pre-capture notice for large pages saved as multiple PNG parts.
+- Added `SingleFileExportAttempt` diagnostics to record when PNG output should stay as multiple parts instead of attempting an unsafe giant canvas.
+- Added beta-stability criteria, including the app-shell sidebar/header requirement for selected beta targets.
+- Updated the automated real-site beta list around docs/wiki/blog, ecommerce/product, and public app-shell targets, excluding login-only pages from the default gate.
+- Added the beta QA failure-handling rule: fix obvious engine bugs immediately, document product tradeoffs in beta notes.
+- Added beta notes with the current PNG beta scope and known limitations.
+- Added CaptureDiagnostics v2 with page size, bitmap size, DPR, strategy, scroll target, failure reason, export status, and image readiness summary.
+- Added a too-many-parts capture-flow fixture to verify CaptureDiagnostics v2 controlled-failure reporting.
+- Added real-site QA auto-classification so routine successful captures become `PASS_AUTO`, while only unstable, blocked, failed, or sampled complex cases go to human review.
+- Added real-site navigation retry for transient page-load failures such as socket disconnects.
+- Added readable download filenames based on site name, page `h1` or URL path, date, and stable multi-part suffixes.
+- Added real-site QA width and first-viewport guards to catch right-crop and viewport/capture mismatches.
+- Hardened scroll-position planning against unsafe stored offset values that could leave transparent gaps in stitched output.
+- Cropped overlap bands from subsequent frames during stitching to reduce visible seam lines between captured viewports.
+- Preserved the extension-generated user-facing screenshot filenames in QA artifacts instead of renaming them to technical test names.
+- Made extension-id discovery in QA runners more reliable by falling back to the loaded MV3 service worker.
+- Replaced Google Maps with SVGOMG in the default real-site QA list because Google Maps can show cookie/consent UI under automation.
+- Aligned popup and QA capture startup so both pass an explicit active tab id into the capture flow.
+- Added Lazy Warmup diagnostics to QA reports to make skipped or missing warmup visible.
+- Expanded the real-site beta QA list from 50 to 100 public targets across docs/wiki/blog, ecommerce/product, and app-shell pages.
+- Hardened fixed/sticky normalization for repeated cookie and consent edge overlays, including overlay candidates inside shadow DOM.
+- Replaced the broken `tldraw` `/f` real-site QA target with the public Three.js Editor app-shell target.
+- Added scroll-settle verification and one retry before each viewport capture to reduce gaps when a page has not reached the planned scroll position.
+- Extended overlay normalization to hide open dialog, modal, promo, and cookie hosts on the first capture frame.
+- Made real-site first-viewport QA tolerate intentional first-frame overlay cleanup while still reporting the mutation in the case report.
+- Added per-frame image-readiness retry so frames with pending visible images or placeholder blocks get a short extra wait before `captureVisibleTab`.
+- Made per-frame image-readiness retry adaptive with a bounded total capture budget so media-heavy pages can wait longer without making every capture path unbounded.
+- Made image-readiness waits progress-aware, with lazy `data-src`/`data-srcset` promotion and pending-with-source diagnostics, so a few stuck images do not consume the whole capture budget.
+- Tuned real-site QA so only pending images with a real source affect automated stability status; source-less pending images remain visible in diagnostics.
+- Added a short first-frame settle delay before the first viewport capture to reduce blank hero/gallery captures after lazy warmup returns to the top of complex pages.
+- Added controlled capture-flow fixtures for FastAPI-style sticky TOC repetition, Figma-style late lazy preview grids, and 11ty-style scroll-settle gap regressions.
+- Added real-site QA guards for blank/low-entropy output, app-shell loaded state, right-side blank/gray strips, and blocking-modal capture-state mismatches.
+- Clamped normal window capture width to the visible viewport to avoid over-wide output with blank right-side regions.
+- Added blocking/entry-gate popup handling so capture stops at the first visible viewport when a popup blocks normal user scrolling.
+- Split modal diagnostics into `scroll-lock`, `entry-gate-text`, and `large-dialog-uncertain` so non-blocking popups can continue capture while uncertain cases still go to review.
+- Expanded blocked-access detection for external error pages such as `Access Denied`, `Oops! Something went wrong`, and `Thank you for your patience`.
+- Narrowed sticky-element suppression so large sticky product media/content panels are no longer hidden after the first frame while sticky docs/sidebar/navigation chrome can still be suppressed.
+- Added `product-sticky-zone-page` capture-flow coverage for DJI-like product configurator pages where a sticky media panel must remain visible during the product-zone scroll and floating helper widgets must not repeat.
+- Expanded floating edge-widget suppression for small chat/help/support/icon-like controls so they do not repeat throughout long stitched captures.
+
+### Known Limits
+
+- Fixed/sticky normalization is v1 and may still need real-site tuning.
+- Scrollbar normalization covers root scrollbars and one dominant internal scroll container.
+- Lazy-load warmup is bounded and does not intentionally expand infinite-scroll feeds.
+- Post-warmup remeasure handles bounded scroll-height growth, but not endless history expansion.
+- Very tall pages are captured as multiple PNG parts when they fit the vertical tiling limits.
+- Lazy-loaded content may need additional stabilization.
+- Only one high-confidence internal scroll container is supported.
+- Capture-flow sticky and scrollbar assertions are marker-based synthetic checks, not full real-site visual diffs.
+- Extremely wide pages or pages requiring too many output parts are still rejected with a clear error.
+- Deep iframe scrolling and iframe-internal normalization are not supported yet.

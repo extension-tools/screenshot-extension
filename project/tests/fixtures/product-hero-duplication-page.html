@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Product Hero Duplication Fixture</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f7fb;
+      color: #111827;
+    }
+
+    .top-nav {
+      position: sticky;
+      top: 0;
+      height: 64px;
+      background: #111827;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 48px;
+      z-index: 10;
+    }
+
+    .hero {
+      min-height: 980px;
+      padding: 56px 96px;
+      background: white;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+      gap: 48px;
+    }
+
+    .hero-title-marker {
+      width: 780px;
+      max-width: 100%;
+      height: 72px;
+      margin-bottom: 24px;
+      background: rgb(230, 40, 80);
+      border-radius: 8px;
+    }
+
+    .headphone-media-marker {
+      width: 640px;
+      height: 620px;
+      max-width: 100%;
+      background: rgb(35, 120, 255);
+      border-radius: 48% 48% 42% 42%;
+      margin-top: 32px;
+    }
+
+    .purchase-panel {
+      position: sticky;
+      top: 96px;
+      align-self: start;
+      min-height: 420px;
+      background: #fff7ed;
+      border: 2px solid #fed7aa;
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .spacer {
+      height: 920px;
+      padding: 80px 96px;
+      background: #eef2ff;
+    }
+
+    .background-section {
+      height: 720px;
+      padding: 88px 96px;
+      color: white;
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.05)),
+        linear-gradient(135deg, rgb(245, 120, 40), rgb(50, 170, 120));
+    }
+
+    .background-text-marker {
+      width: 520px;
+      height: 180px;
+      background: rgb(245, 120, 40);
+      border: 6px solid white;
+      box-sizing: border-box;
+    }
+
+    .clipped-section {
+      height: 760px;
+      padding: 72px 96px;
+      background: white;
+    }
+
+    .top-text-marker {
+      width: 620px;
+      height: 90px;
+      background: rgb(130, 90, 255);
+      border-radius: 8px;
+    }
+
+    .footer {
+      height: 520px;
+      background: #111827;
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">Product navigation should not repeat down the capture.</nav>
+  <main>
+    <section class="hero">
+      <div>
+        <div class="hero-title-marker" aria-label="hero title marker"></div>
+        <p>Hero title and product media should appear once, not again below the first viewport.</p>
+        <div class="headphone-media-marker" aria-label="headphone media marker"></div>
+      </div>
+      <aside class="purchase-panel">
+        <h2>Purchase panel</h2>
+        <p>This sticky product content is allowed to remain visible during product-zone capture.</p>
+      </aside>
+    </section>
+    <section class="spacer">
+      <h2>Intermediate content</h2>
+      <p>This creates enough scroll distance to expose duplicated hero and shifted-fragment bugs.</p>
+    </section>
+    <section class="background-section">
+      <div class="background-text-marker" aria-label="background text marker"></div>
+    </section>
+    <section class="clipped-section">
+      <div class="top-text-marker" aria-label="top text marker"></div>
+      <p>The top marker should not be clipped by a bad split boundary.</p>
+    </section>
+    <footer class="footer"></footer>
+  </main>
+</body>
+</html>

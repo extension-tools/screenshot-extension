@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visible Overlay First Frame Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      color: #172033;
+      background: #f5f7fb;
+    }
+
+    header {
+      padding: 42px 52px 28px;
+      color: white;
+      background: #16233f;
+    }
+
+    main {
+      display: grid;
+      gap: 28px;
+      padding: 36px 52px 180px;
+    }
+
+    section {
+      min-height: 620px;
+      padding: 32px;
+      border: 4px solid #263a67;
+      background: white;
+    }
+
+    section:nth-child(2) {
+      background: #e9f8ff;
+    }
+
+    section:nth-child(3) {
+      background: #fff2d6;
+    }
+
+    section:nth-child(4) {
+      background: #efe8ff;
+    }
+
+    .visible-overlay-backdrop {
+      position: fixed;
+      z-index: 10000;
+      inset: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 240px 34px 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .visible-overlay-card {
+      width: 320px;
+      min-height: 170px;
+      padding: 24px;
+      color: #111827;
+      background: rgb(255, 96, 0);
+      border: 8px solid rgb(90, 20, 20);
+      border-radius: 12px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    .visible-overlay-card h2,
+    .visible-overlay-card p {
+      margin: 0 0 12px;
+    }
+
+    .visible-overlay-respawn {
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 220px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visible Overlay First Frame Fixture</h1>
+    <p>The orange dialog should be captured once, matching what the user sees before capture.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>First viewport content</h2>
+      <p>The fixed dialog is intentionally visible over this first viewport.</p>
+    </section>
+    <section>
+      <h2>Second section</h2>
+      <p>The dialog should not repeat over this section after the first frame.</p>
+    </section>
+    <section>
+      <h2>Third section</h2>
+      <p>The screenshot should continue after suppressing repeated overlay chrome.</p>
+    </section>
+    <section>
+      <h2>Final section</h2>
+      <p>The final content proves the full-page capture still reaches the bottom.</p>
+    </section>
+  </main>
+
+  <aside class="visible-overlay-backdrop" role="dialog" aria-modal="true">
+    <div class="visible-overlay-card">
+      <h2>Get started for free</h2>
+      <p>Visible overlays should be preserved in the first frame.</p>
+    </div>
+  </aside>
+
+  <script>
+    let respawned = false;
+
+    const hasVisibleOverlay = () => {
+      return Array.from(document.querySelectorAll('.visible-overlay-backdrop')).some(element => {
+        const style = getComputedStyle(element);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+    };
+
+    const respawnOverlayOnce = () => {
+      if (respawned || window.scrollY < 500 || hasVisibleOverlay()) {
+        return;
+      }
+
+      respawned = true;
+      const aside = document.createElement('aside');
+      aside.className = 'visible-overlay-backdrop visible-overlay-respawn';
+      aside.setAttribute('role', 'dialog');
+      aside.setAttribute('aria-modal', 'true');
+      aside.innerHTML = `
+        <div class="visible-overlay-card">
+          <h2>Get started for free</h2>
+          <p>This simulated site-side popup respawns after stabilization.</p>
+        </div>
+      `;
+      document.body.appendChild(aside);
+    };
+
+    window.addEventListener('scroll', () => {
+      setTimeout(respawnOverlayOnce, 120);
+    }, {passive: true});
+  </script>
+</body>
+</html>

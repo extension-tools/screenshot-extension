@@ -1,0 +1,21 @@
+{
+  "viewport": {
+    "width": 1365,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "threshold": {
+    "maxDiffRatio": 0.01,
+    "maxDiffPixels": 5000
+  },
+  "sites": [
+    {
+      "name": "example",
+      "url": "https://example.com/",
+      "fullPage": true,
+      "waitUntil": "networkidle",
+      "hideSelectors": []
+    }
+  ]
+}
+

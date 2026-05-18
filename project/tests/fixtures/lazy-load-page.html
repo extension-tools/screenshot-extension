@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lazy Load Page Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #102033;
+      background: #f7f8fb;
+    }
+
+    header {
+      padding: 32px 48px;
+      color: white;
+      background: #163a63;
+    }
+
+    main {
+      display: grid;
+      gap: 32px;
+      padding: 40px 48px 80px;
+    }
+
+    section {
+      min-height: 520px;
+      padding: 32px;
+      border: 4px solid #1b2d4f;
+      background: white;
+    }
+
+    .lazy-result {
+      width: 100%;
+      min-height: 220px;
+      margin-top: 24px;
+      padding: 32px;
+      border: 8px solid #122033;
+      background: #d8dde8;
+    }
+
+    body.lazy-ready .lazy-result {
+      background: rgb(0, 210, 120);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lazy Load Page Fixture</h1>
+    <p>The green marker near the top appears only after the page has been scrolled down first.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Top Section</h2>
+      <p>Without warmup, this first tile would be captured before the scroll-triggered marker turns green.</p>
+      <div class="lazy-result">Scroll-triggered lazy marker</div>
+    </section>
+    <section>
+      <h2>Trigger Zone</h2>
+      <p>Scrolling into this area simulates lazy rendering and scroll-triggered hydration.</p>
+    </section>
+    <section>
+      <h2>More Content</h2>
+      <p>The page remains taller than one viewport so capture requires multiple frames.</p>
+    </section>
+    <section>
+      <h2>Bottom Content</h2>
+      <p>Warmup should stay inside the already measured page height and then return to the top.</p>
+    </section>
+  </main>
+
+  <script>
+    const activateLazyMarker = () => {
+      if (window.scrollY > window.innerHeight) {
+        document.body.classList.add('lazy-ready');
+        window.removeEventListener('scroll', activateLazyMarker);
+      }
+    };
+
+    window.addEventListener('scroll', activateLazyMarker, {passive: true});
+  </script>
+</body>
+</html>

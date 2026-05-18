@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipping Popup Sticky Repeat Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      color: #172033;
+      background: #f6f1e8;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: 74px;
+      padding: 22px 42px;
+      background: rgb(42, 44, 48);
+      color: white;
+      font-weight: 700;
+    }
+
+    main {
+      display: grid;
+      gap: 28px;
+      padding: 32px 46px 140px;
+    }
+
+    section {
+      min-height: 620px;
+      padding: 30px;
+      background: white;
+      border: 4px solid #243047;
+    }
+
+    .shipping-modal {
+      position: fixed;
+      z-index: 10000;
+      top: 170px;
+      left: 50%;
+      width: 420px;
+      min-height: 230px;
+      transform: translateX(-50%);
+      padding: 28px;
+      border-radius: 12px;
+      background: rgb(255, 128, 0);
+      box-shadow: 0 18px 70px rgba(0, 0, 0, 0.35);
+      color: #111827;
+      text-align: center;
+    }
+
+    .shipping-modal h2 {
+      margin: 0 0 20px;
+      font-size: 28px;
+    }
+
+    .shipping-modal p {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    Shipping Header
+  </header>
+
+  <main>
+    <section>
+      <h1>Product hero</h1>
+      <p>The shipping modal and sticky header are intentionally visible in the first viewport.</p>
+    </section>
+    <section>
+      <h2>Product story</h2>
+      <p>Neither the modal nor the sticky header should repeat over this section.</p>
+    </section>
+    <section>
+      <h2>Product details</h2>
+      <p>The capture should continue with normal content.</p>
+    </section>
+    <section>
+      <h2>Bottom marker</h2>
+      <p>Final content proves the whole page was captured.</p>
+    </section>
+  </main>
+
+  <aside class="shipping-modal" role="dialog" aria-modal="true">
+    <h2>Where are we shipping to?</h2>
+    <p>Purchasing from your country connects your order to the right store.</p>
+  </aside>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Options :: Screenshot Extension</title>
+  <link rel="stylesheet" type="text/css" href="index.css">
+</head>
+
+<body>
+  <p class="opts">
+    <label for="saveAs">Ask for location to store screenshots</label>
+    <input type="checkbox" id="saveAs">
+  </p>
+
+  <div class="opts">
+    <label for="delay">Delay in milliseconds between each capture (entire page)</label>
+    <input type="number" id="delay">
+    <label for="offset">Scroll offset (entire page)</label>
+    <input type="number" id="offset">
+    <label for="format">Image format</label>
+    <select id="format">
+      <option value="png">PNG</option>
+      <option value="jpeg">JPEG</option>
+    </select>
+    <label for="format-canvas">Image format for post rendering (PNG is fallback)</label>
+    <select id="format-canvas">
+      <option value="png">PNG</option>
+      <option value="jpeg">JPEG</option>
+      <option value="webp">WebP</option>
+      <option value="avif">Avif</option>
+    </select>
+    <label for="quality">Image quality (0.3-1)</label>
+    <input type="number" id="quality" min="0.3" max="1" step="0.01">
+  </div>
+
+  <p>
+    <input type="button" value="Factory Reset" id="reset">
+    <input type="button" value="Save Options" id="save">
+    <span id="toast"></span>
+  </p>
+
+  <script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dimmed Popup Scroll State Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      color: #172033;
+      background: rgb(240, 240, 240);
+      font-family: Arial, sans-serif;
+    }
+
+    header,
+    section {
+      min-height: 760px;
+      padding: 64px;
+      background: rgb(240, 240, 240);
+      border-bottom: 1px solid rgb(212, 212, 212);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 20px;
+      font-size: 48px;
+    }
+
+    p {
+      max-width: 760px;
+      font-size: 22px;
+      line-height: 1.6;
+    }
+
+    .scroll-dim-backdrop {
+      position: fixed;
+      z-index: 10000;
+      inset: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 180px;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .scroll-dim-dialog {
+      width: 420px;
+      padding: 30px;
+      color: #111827;
+      background: rgb(255, 96, 0);
+      border: 8px solid rgb(104, 32, 16);
+      border-radius: 16px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dimmed Popup Scroll State</h1>
+    <p>The user can scroll while the popup is open, and every viewport stays dimmed.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Second viewport</h2>
+      <p>This section should still be darkened in the final stitched screenshot.</p>
+    </section>
+    <section>
+      <h2>Third viewport</h2>
+      <p>The modal panel should not repeat, but the dimmed page state should continue.</p>
+    </section>
+    <section>
+      <h2>Final viewport</h2>
+      <p>The screenshot should reach the bottom without returning to the undimmed page state.</p>
+    </section>
+  </main>
+
+  <div id="onetrust-consent-sdk">
+    <aside class="scroll-dim-backdrop onetrust-pc-dark-filter ot-fade-in" role="dialog" aria-modal="true">
+      <div class="scroll-dim-dialog" id="onetrust-banner-sdk">
+        <h2>Cookie preferences</h2>
+        <p>The orange panel belongs only to the first viewport; the dimmed backdrop belongs to the open popup state.</p>
+        <button>Accept all</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    let removedBackdropDuringScroll = false;
+
+    window.addEventListener('scroll', () => {
+      if (removedBackdropDuringScroll || window.scrollY < 500) {
+        return;
+      }
+
+      removedBackdropDuringScroll = true;
+      document.querySelector('.scroll-dim-backdrop')?.remove();
+    }, {passive: true});
+  </script>
+</body>
+</html>

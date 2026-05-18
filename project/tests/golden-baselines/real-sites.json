@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "purpose": "Manual golden baselines for regression-critical real sites. These files are source-of-truth visual references for extension output review, not broad always-on visual tests for all 100 sites.",
+  "usage": [
+    "Use a golden baseline when a listed site lands in 01-LOOK-FIRST-engine-risk or UNSTABLE SITE after an engine/QA change.",
+    "Use a golden baseline before closing a bug class that was found by manual review on that site.",
+    "Do not run golden-baseline comparison for every user capture or every 100-site run by default.",
+    "Do not add baselines for all 100 sites; keep this set to the highest-risk 10-20 sites and prefer detector fixtures for general bug classes."
+  ],
+  "baselines": [
+    {
+      "name": "Cloudflare Blog",
+      "url": "https://blog.cloudflare.com/",
+      "file": "real-sites/cloudflare-blog.png",
+      "sourceFile": "/Users/dima/Desktop/Golden baselines  2/screencapture-blog-cloudflare-2026-05-18-06_49_40.png",
+      "capturedAtLocal": "2026-05-18 06:49:40",
+      "pixelSize": {
+        "width": 3408,
+        "height": 12268
+      },
+      "guards": [
+        "footer/bottom closure present",
+        "blog card grid remains populated",
+        "cookie strip appears as first-state overlay only"
+      ]
+    },
+    {
+      "name": "Dyson Vacuums",
+      "url": "https://www.dyson.com/vacuum-cleaners",
+      "file": "real-sites/dyson-vacuums.png",
+      "sourceFile": "/Users/dima/Desktop/Golden baselines  2/screencapture-dyson-vacuum-cleaners-2026-05-18-08_26_36.png",
+      "capturedAtLocal": "2026-05-18 08:26:36",
+      "pixelSize": {
+        "width": 3410,
+        "height": 20634
+      },
+      "guards": [
+        "black product navigation/search bar does not repeat",
+        "product comparison and rich media sections remain populated",
+        "footer FAQ and link sections remain present"
+      ]
+    },
+    {
+      "name": "Next.js Docs",
+      "url": "https://nextjs.org/docs",
+      "file": "real-sites/next-js-docs.png",
+      "sourceFile": "/Users/dima/Desktop/Golden baselines  2/screencapture-nextjs-org-docs-2026-05-18-08_51_05.png",
+      "capturedAtLocal": "2026-05-18 08:51:05",
+      "pixelSize": {
+        "width": 3410,
+        "height": 7122
+      },
+      "guards": [
+        "main docs content scrolls cleanly",
+        "left docs sidebar and right On this page sidebar do not repeat",
+        "footer is present without sidebar fragments"
+      ]
+    }
+  ]
+}

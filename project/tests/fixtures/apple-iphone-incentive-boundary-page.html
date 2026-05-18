@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apple iPhone Incentive Boundary Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #1d1d1f;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+    }
+
+    .hero {
+      min-height: 760px;
+      padding: 96px 72px;
+      background: #ffffff;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 76px;
+      line-height: 1.04;
+    }
+
+    .prelude {
+      min-height: 540px;
+      padding: 72px;
+      background: #f5f5f7;
+      color: #6e6e73;
+      font-size: 24px;
+      line-height: 1.45;
+    }
+
+    .section-incentive {
+      min-height: 980px;
+      padding: 72px;
+      background: #f5f5f7;
+    }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 32px;
+      align-items: end;
+      margin-bottom: 56px;
+    }
+
+    .section-header-headline {
+      max-width: 860px;
+      margin: 0 0 20px;
+      color: rgb(210, 30, 70);
+      font-size: 64px;
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .section-header-subcopy {
+      max-width: 760px;
+      margin: 0;
+      color: rgb(20, 110, 220);
+      font-size: 28px;
+      line-height: 1.32;
+      font-weight: 700;
+    }
+
+    .section-header-cta {
+      color: #0066cc;
+      font-size: 21px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .scroll-gallery {
+      overflow: visible;
+    }
+
+    .card-set {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .feature-card {
+      min-height: 480px;
+      padding: 36px;
+      border-radius: 28px;
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    }
+
+    .feature-card-label {
+      margin: 0 0 16px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .feature-card-headline {
+      margin: 0 0 20px;
+      font-size: 32px;
+      line-height: 1.14;
+      font-weight: 800;
+    }
+
+    .feature-card-body {
+      margin: 0;
+      color: #424245;
+      font-size: 20px;
+      line-height: 1.4;
+    }
+
+    .card-marker {
+      height: 104px;
+      margin-top: 40px;
+      border-radius: 18px;
+    }
+
+    .trade-marker {
+      background: rgb(20, 180, 120);
+    }
+
+    .monthly-marker {
+      background: rgb(255, 170, 20);
+    }
+
+    .carrier-marker {
+      background: rgb(80, 120, 255);
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>iPhone</h1>
+  </section>
+
+  <section class="prelude">
+    Product content above the buying section creates a realistic split position.
+    The next section is based on Apple's iPhone incentive gallery structure:
+    a large section headline, a CTA, and a row of rounded cards.
+  </section>
+
+  <section class="section section-incentive background-alt" aria-label="Why Apple">
+    <header class="section-header row">
+      <div>
+        <h2 class="section-header-headline">Why Apple is the best<br>place to buy iPhone.</h2>
+        <p class="section-header-subcopy">This subcopy must stay attached to the headline and must not be clipped above the product cards.</p>
+      </div>
+      <a class="section-header-cta" href="/us/shop/goto/buy_iphone">Shop iPhone</a>
+    </header>
+
+    <div class="gallery scroll-gallery feature-card-gallery short" aria-label="Why Apple gallery">
+      <ul class="card-set grid card-set-full-bleed" role="list">
+        <li class="card-container feature-card theme-light background-alt gallery-item" role="listitem">
+          <h3 class="feature-card-label">Apple Trade In</h3>
+          <p class="feature-card-headline">Save on a new iPhone with a trade-in.</p>
+          <p class="feature-card-body">Get credit toward your next iPhone when you trade in an eligible device.</p>
+          <div class="card-marker trade-marker" aria-hidden="true"></div>
+        </li>
+        <li class="card-container feature-card theme-light background-alt gallery-item" role="listitem">
+          <h3 class="feature-card-label">Ways to Buy</h3>
+          <p class="feature-card-headline">Pay over time, interest-free.</p>
+          <p class="feature-card-body">Choose monthly installments and keep the buying card visible after the split.</p>
+          <div class="card-marker monthly-marker" aria-hidden="true"></div>
+        </li>
+        <li class="card-container feature-card theme-light background-alt gallery-item" role="listitem">
+          <h3 class="feature-card-label">Carrier Deals at Apple</h3>
+          <p class="feature-card-headline">Get credit on a new iPhone after trade-in.</p>
+          <p class="feature-card-body">The cards below the header must not replace or cut the headline.</p>
+          <div class="card-marker carrier-marker" aria-hidden="true"></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>

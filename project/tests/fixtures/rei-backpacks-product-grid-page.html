@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REI Backpacks Product Grid Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      color: #1f2933;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #262626;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      background: #f4f2ec;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      height: 54px;
+      padding: 16px 84px;
+      color: #f8fafc;
+      background: #1d1d1b;
+      font-size: 13px;
+    }
+
+    .shop-header {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr) 280px;
+      align-items: center;
+      min-height: 88px;
+      gap: 24px;
+      padding: 18px 84px;
+      background: #f4f2ec;
+      border-bottom: 1px solid #d7d3c8;
+    }
+
+    .brand {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .search {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      background: #ffffff;
+      border: 1px solid #9ca3af;
+      color: #777;
+    }
+
+    .account {
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .sale-strip {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      background: #c93113;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .content {
+      padding: 18px 84px 140px;
+      background: #fffdf8;
+    }
+
+    .breadcrumb {
+      color: #6b7280;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding-bottom: 44px;
+      border-bottom: 1px solid #d7d3c8;
+    }
+
+    .title-row h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      font-weight: 500;
+      letter-spacing: 0;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: flex-end;
+      gap: 36px;
+      margin-top: -35px;
+      padding-right: 40px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .tabs span:first-child {
+      color: #0f4e8a;
+      border-bottom: 4px solid #2b72c8;
+      padding-bottom: 12px;
+    }
+
+    .listing {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 26px;
+      align-items: start;
+      padding-top: 28px;
+    }
+
+    .U_UnVrgBfyFBaPWqI7EC {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      height: calc(100vh - 36px);
+      overflow-y: scroll;
+      color: #1d1d1b;
+    }
+
+    .v5aQpTvzpG0vNWtBNoGN {
+      min-height: 1560px;
+    }
+
+    .U_UnVrgBfyFBaPWqI7EC h2 {
+      margin: 0 0 22px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .fulfillment-card {
+      margin-bottom: 18px;
+      padding: 18px;
+      background: #ffffff;
+      border: 1px solid #b4afa3;
+      border-radius: 4px;
+    }
+
+    .fulfillment-card.store-pickup-marker {
+      background:
+        linear-gradient(rgb(20, 120, 70), rgb(20, 120, 70)) 16px 116px / 196px 110px no-repeat,
+        #ffffff;
+    }
+
+    .radio-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: #c5bfb4;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .fake-radio {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #d0cbbf;
+      background: #ffffff;
+    }
+
+    .label {
+      margin: 16px 0 8px;
+      color: #606060;
+      font-size: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      height: 42px;
+    }
+
+    .input {
+      flex: 1;
+      border: 1px solid #9b968d;
+      background: white;
+    }
+
+    .button {
+      width: 42px;
+      color: white;
+      background: #165c3b;
+    }
+
+    .category-block {
+      margin: 26px 0 22px;
+      padding: 16px 14px;
+      border-top: 1px solid #d7d3c8;
+      border-bottom: 1px solid #d7d3c8;
+      background:
+        linear-gradient(rgb(191, 64, 255), rgb(191, 64, 255)) 14px 12px / 182px 120px no-repeat,
+        #fffdf8;
+    }
+
+    .category-block h3 {
+      margin: 0 0 16px;
+      font-size: 16px;
+    }
+
+    .category-block p {
+      margin: 0 0 11px;
+      padding-left: 20px;
+      color: #595959;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .grid-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 50px;
+      margin-bottom: 20px;
+    }
+
+    .sort {
+      min-width: 210px;
+      padding: 11px 16px;
+      background: white;
+      border: 1px solid #9b968d;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .cdr-grid_16-3-1 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      list-style: none;
+      margin: 0;
+      gap: 26px 18px;
+      background: #f1eee7;
+      padding: 18px;
+    }
+
+    .VcGDfKKy_dvNbxUqm29K {
+      position: relative;
+      min-height: 560px;
+      padding: 18px 18px 20px;
+      overflow: hidden;
+      background: #ffffff;
+      border: 1px solid #eee8dd;
+    }
+
+    .VcGDfKKy_dvNbxUqm29K::before {
+      position: absolute;
+      z-index: 0;
+      top: 92px;
+      right: 0;
+      bottom: 92px;
+      left: 0;
+      content: "";
+      background: rgb(246, 240, 230);
+    }
+
+    .VcGDfKKy_dvNbxUqm29K > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .sale {
+      width: 138px;
+      height: 18px;
+      margin-bottom: 14px;
+      color: #c93113;
+      border-bottom: 5px solid #c93113;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .photo {
+      height: 210px;
+      margin-bottom: 18px;
+      border-radius: 2px;
+      background:
+        radial-gradient(circle at 50% 45%, #3f8794 0 34%, transparent 35%),
+        linear-gradient(135deg, #f8fafc, #e5e7eb);
+    }
+
+    .swatches {
+      display: flex;
+      gap: 7px;
+      margin: 0 0 20px;
+    }
+
+    .swatches span {
+      width: 26px;
+      height: 20px;
+      border: 2px solid white;
+      outline: 1px solid #9b968d;
+      background: #236477;
+    }
+
+    .swatches span:nth-child(2) {
+      background: #c95c35;
+    }
+
+    .swatches span:nth-child(3) {
+      background: #222;
+    }
+
+    .VcGDfKKy_dvNbxUqm29K h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .VcGDfKKy_dvNbxUqm29K p {
+      margin: 0 0 8px;
+      color: #444;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .price {
+      margin-top: 18px;
+      color: #c93113;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .compare {
+      margin-top: 24px;
+      width: 86px;
+      height: 34px;
+      border: 1px solid #a8a29a;
+      border-radius: 4px;
+      background: white;
+      text-align: center;
+      line-height: 32px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">Shop REI Outlet Trade-In Travel Classes & Events Expert Advice Membership</div>
+    <header class="shop-header">
+      <div class="brand">REI Shop</div>
+      <div class="search">Search for great gear &amp; clothing</div>
+      <div class="account">My REI · Sign in · Cart</div>
+    </header>
+    <div class="sale-strip">Our biggest sale of the year is on now! Shop now</div>
+
+    <main class="content">
+      <div class="breadcrumb">Packs and Bags / Packs</div>
+      <div class="title-row">
+        <h1>Backpacks</h1>
+        <span>(647 products)</span>
+      </div>
+      <div class="tabs"><span>Products (647)</span><span>Expert Advice (176)</span></div>
+
+      <div class="listing">
+        <div class="U_UnVrgBfyFBaPWqI7EC h3qOsRs7snzks0Ow81bj eI9VdvNEW4Ue76ZEyNdg ICjr1EJjWJddPA0BE24K">
+          <div class="v5aQpTvzpG0vNWtBNoGN XIn3qh4EzeTObJYZnfRU">
+            <div id="modal-filters" class="u7TP_3GNjykbQrxcUH2b I_0duzzo7FuRhGiQp9r2 J5_PmjWuPbLy5D239gtA">
+              <h2>Filter</h2>
+              <section class="fulfillment-card store-pickup-marker">
+                <div class="radio-line"><span class="fake-radio"></span><span>Store Pickup</span></div>
+                <p>Ready within 2 hours</p>
+                <div class="label">Select a store</div>
+                <div class="label">ZIP or City, State · Nearby</div>
+                <div class="input-row"><div class="input"></div><div class="button"></div></div>
+                <p>Example: 98102 or Taos, NM</p>
+              </section>
+              <section class="fulfillment-card">
+                <div class="radio-line"><span class="fake-radio"></span><span>Ship to Address (632)</span></div>
+              </section>
+              <section class="category-block">
+                <h3>Filter by Categories</h3>
+                <p>Travel Backpacks (188)</p>
+                <p>Daypacks (152)</p>
+                <p>Laptop Backpacks (133)</p>
+                <p>Backpacking Packs (99)</p>
+                <p>Pack Accessories (91)</p>
+                <p>Hydration Backpacks (79)</p>
+              </section>
+              <section class="category-block">
+                <h3>Brand</h3>
+                <p>REI Co-op</p>
+                <p>Patagonia</p>
+                <p>The North Face</p>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <section aria-label="Products">
+          <div class="grid-header">
+            <div class="sort">Sort by: Best Match</div>
+            <div>View: 30 · 90</div>
+          </div>
+          <ul id="search-results" class="cdr-grid_16-3-1 cdr-grid--gutter-medium@xs_16-3-1 cdr-grid--gutter-large@md_16-3-1">
+            <script>
+              const names = [
+                'Trail 25 Pack', 'Flash 22 Pack', 'Trail 40 Pack', 'Ruckpack 30 Pack',
+                'Black Hole Pack', 'Borealis Trail Pack', 'Traverse 60 Pack', 'Traverse 32 Pack',
+                'Commuter Pack', 'Hydration Pack'
+              ];
+
+              for (let index = 0; index < 90; index += 1) {
+                const name = names[index % names.length];
+                document.write(`
+                  <li class="VcGDfKKy_dvNbxUqm29K" data-product-index="${index}">
+                    <div class="sale">SALE ENDS MAY 25</div>
+                    <div class="photo" aria-hidden="true"></div>
+                    <div class="swatches"><span></span><span></span><span></span></div>
+                    <h3>REI Co-op</h3>
+                    <p>${name}</p>
+                    <div class="price">$${44 + index}.89</div>
+                    <p>★★★★☆ (${20 + index})</p>
+                    <p>Gear Capacity: ${22 + (index % 20)} liters</p>
+                    <p>Features: Reservoir Compatible · Raincover Included</p>
+                    <div class="compare">Compare</div>
+                  </li>
+                `);
+              }
+            </script>
+          </ul>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

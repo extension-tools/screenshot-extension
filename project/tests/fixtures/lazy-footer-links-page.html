@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lazy Footer Links Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #111827;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f2;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      padding: 28px 72px;
+      color: #ffffff;
+      background: #10251d;
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .hero {
+      min-height: 720px;
+      padding: 96px 72px;
+      color: #ffffff;
+      background: #315d4d;
+    }
+
+    .hero h1 {
+      max-width: 780px;
+      margin: 0 0 20px;
+      font-size: 68px;
+      line-height: 1.05;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      padding: 72px;
+      background: #ffffff;
+    }
+
+    .card {
+      min-height: 520px;
+      padding: 32px;
+      border-radius: 8px;
+      background: #eef3ee;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .story {
+      min-height: 900px;
+      padding: 96px 72px;
+      background: #faf7ef;
+    }
+
+    .story h2 {
+      margin: 0 0 24px;
+      font-size: 54px;
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) 1.7fr;
+      gap: 72px;
+      min-height: 720px;
+      padding: 72px;
+      color: #ffffff;
+      background: #111111;
+    }
+
+    .footer h2,
+    .footer h3 {
+      margin: 0 0 22px;
+    }
+
+    .footer-brand {
+      font-size: 28px;
+      line-height: 1.5;
+    }
+
+    .footer-links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 44px;
+      min-height: 420px;
+    }
+
+    .placeholder {
+      min-height: 260px;
+      border: 2px dashed rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+    }
+
+    .link-column {
+      padding: 28px;
+      border-radius: 8px;
+      background: #1f2937;
+    }
+
+    .link-column a {
+      display: block;
+      margin: 0 0 18px;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .company-marker {
+      height: 96px;
+      margin-top: 24px;
+      border-radius: 8px;
+      background: rgb(20, 180, 120);
+    }
+
+    .info-marker {
+      height: 96px;
+      margin-top: 24px;
+      border-radius: 8px;
+      background: rgb(255, 170, 20);
+    }
+
+    .footer-bottom-marker {
+      grid-column: 1 / -1;
+      height: 80px;
+      border-radius: 8px;
+      background: rgb(80, 120, 255);
+    }
+  </style>
+</head>
+<body>
+  <header>Product listing with lazy footer</header>
+
+  <section class="hero">
+    <h1>Wool runners for everyday movement</h1>
+    <p>This fixture models an ecommerce page whose footer navigation loads near the bottom.</p>
+  </section>
+
+  <main class="grid" aria-label="Products">
+    <article class="card">Runner 01</article>
+    <article class="card">Runner 02</article>
+    <article class="card">Runner 03</article>
+    <article class="card">Runner 04</article>
+    <article class="card">Runner 05</article>
+    <article class="card">Runner 06</article>
+  </main>
+
+  <section class="story">
+    <h2>Built for light steps</h2>
+    <p>Content before the footer keeps the page long enough to require warmup and multiple capture frames.</p>
+  </section>
+
+  <footer class="footer" id="site-footer">
+    <div class="footer-brand">
+      <h2>Footer</h2>
+      <p>The left brand column is static. The right Company and Information links are populated after the footer enters the viewport.</p>
+    </div>
+    <div class="footer-links" id="footer-links" aria-live="polite">
+      <div class="placeholder"></div>
+      <div class="placeholder"></div>
+    </div>
+    <div class="footer-bottom-marker"></div>
+  </footer>
+
+  <script>
+    const footer = document.getElementById('site-footer');
+    const links = document.getElementById('footer-links');
+    let loaded = false;
+
+    const loadFooterLinks = () => {
+      if (loaded) {
+        return;
+      }
+
+      loaded = true;
+      setTimeout(() => {
+        links.innerHTML = `
+          <nav class="link-column" aria-label="Company">
+            <h3>Company</h3>
+            <a href="/about">About us</a>
+            <a href="/stores">Stores</a>
+            <a href="/careers">Careers</a>
+            <a href="/responsibility">Responsibility</a>
+            <div class="company-marker"></div>
+          </nav>
+          <nav class="link-column" aria-label="Information">
+            <h3>Information</h3>
+            <a href="/help">Help</a>
+            <a href="/returns">Returns</a>
+            <a href="/shipping">Shipping</a>
+            <a href="/contact">Contact</a>
+            <div class="info-marker"></div>
+          </nav>
+        `;
+      }, 180);
+    };
+
+    const checkFooter = () => {
+      const rect = footer.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 240) {
+        loadFooterLinks();
+      }
+    };
+
+    window.addEventListener('scroll', checkFooter, {passive: true});
+    window.addEventListener('resize', checkFooter);
+    checkFooter();
+  </script>
+</body>
+</html>

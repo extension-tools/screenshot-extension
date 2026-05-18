@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Broken Image Diagnostics Fixture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #172033;
+      background: #ffffff;
+    }
+
+    header {
+      padding: 32px 48px;
+      color: white;
+      background: #4b284f;
+    }
+
+    main {
+      display: grid;
+      gap: 32px;
+      padding: 40px 48px 100px;
+    }
+
+    section {
+      min-height: 640px;
+      padding: 32px;
+      border: 4px solid #4b284f;
+      background: #f8f3fb;
+    }
+
+    img {
+      display: block;
+      width: 420px;
+      height: 220px;
+      margin-bottom: 24px;
+      background: rgb(232, 232, 232);
+    }
+
+    .marker {
+      width: 100%;
+      height: 160px;
+      background: rgb(90, 80, 255);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Broken Image Diagnostics Fixture</h1>
+    <p>The first visible image intentionally 404s so diagnostics can report a broken preview without failing capture.</p>
+  </header>
+  <main>
+    <section>
+      <img src="/missing-preview-image.png" alt="intentionally broken preview">
+      <h2>Broken preview</h2>
+      <p>The capture should still complete, and image readiness diagnostics should report the broken image.</p>
+    </section>
+    <section>
+      <div class="marker"></div>
+      <h2>Normal content continues</h2>
+      <p>This marker proves the final screenshot remains valid after the broken image.</p>
+    </section>
+  </main>
+</body>
+</html>
