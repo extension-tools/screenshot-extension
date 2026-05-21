@@ -8,7 +8,12 @@ minified-code/
 project/.cache/
 project/tests/capture-results/
 project/tests/diagnostic-crops/
+project/tests/generated/
 project/tests/visual-results/
+
+# Local saved real-site HTML dumps for investigation.
+# Keep these out of Git; promote small reusable fixtures separately.
+project/tests/HTML Complicated Sites/
 
 # Screenshot review generated artifacts.
 # Keep only the handoff/readme structure, not run outputs or PNG artifacts.
@@ -25,6 +30,7 @@ Screenshots-for-Review/For-Codex/reviewed/*
 
 # Local machine files
 .DS_Store
+Old Screenshot extension/
 
 # Secrets and packaged extension artifacts
 .env
