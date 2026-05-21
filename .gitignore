@@ -11,6 +11,13 @@ project/tests/diagnostic-crops/
 project/tests/generated/
 project/tests/visual-results/
 
+# Transient QA/research run reports.
+# Keep durable summaries in project/tests/real-site-findings.md and docs instead.
+project/tests/real-site-qa-*.md
+project/tests/broad-*.md
+project/tests/wide-card-*.md
+project/tests/targeted-*.md
+
 # Local saved real-site HTML dumps for investigation.
 # Keep these out of Git; promote small reusable fixtures separately.
 project/tests/HTML Complicated Sites/
