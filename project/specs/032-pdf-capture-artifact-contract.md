@@ -168,6 +168,12 @@ async function exportArtifact({artifact, prefs}) {
 
 MVP should use page-based PDF output from existing bitmap/tiles.
 
+Product decision:
+
+```text
+PDF export uses A4/Letter-style pages, not one infinitely long PDF page.
+```
+
 Default recommendation:
 
 ```text
@@ -175,20 +181,34 @@ PDF pages from existing capture bitmap/tiles.
 No new page capture logic.
 ```
 
-Open product decision before implementation:
+The implementation must support a page size policy:
 
-| Option | Product effect |
+| Page size | Requirement |
 | --- | --- |
-| One long PDF page | Closest to a full-page screenshot, less print-friendly. |
-| A4/Letter pages | More document-like, needs pagination and scaling decisions. |
-| Pages from existing tiles | Best starting point for large pages, reuses current output boundaries. |
+| A4 | Required default for metric/non-US contexts unless product settings choose otherwise. |
+| Letter | Required for US-style export or future user preference. |
 
 Recommended MVP:
 
 ```text
-Use existing output boundaries.
+Use A4/Letter PDF pages.
 For single bitmap, paginate by chosen PDF page height.
-For tiled output, use tiles as page/image sources without recomposing a giant bitmap.
+For tiled output, map tiles into A4/Letter pages without recomposing a giant bitmap.
+```
+
+Open implementation decision:
+
+```text
+Choose default page size source:
+1. fixed default: A4;
+2. locale-based default: Letter for US, A4 otherwise;
+3. explicit user setting.
+```
+
+For the first implementation, prefer the smallest product surface:
+
+```text
+default A4, internal support for Letter, no new UI unless already required by export settings.
 ```
 
 ## Diagnostics Contract
@@ -258,7 +278,7 @@ This spec is a pre-code contract.
 Do not implement PDF export until these are decided:
 
 1. PDF library choice.
-2. PDF page size policy.
+2. PDF page size default: A4-only first, locale-based A4/Letter, or user setting.
 3. `CaptureArtifact` producer location.
 4. Whether to introduce `ExportController` immediately or keep a minimal `PdfExporter` first.
 5. Test strategy for "no second capture pipeline".

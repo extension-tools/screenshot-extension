@@ -47,6 +47,7 @@ Screenshot Extension is a Chrome MV3 extension for one-click full-page capture f
 | Popup duplicates in capture. | Repeated popup/modal overlay normalization. | Patagonia. | Nice to have |
 | First viewport is dimmed, but later frames become light/white while a popup is active. | Dimmed backdrop continuity / modal overlay state mismatch. | Samsung. | Nice to have |
 | Footer is missing from the final capture. | Bounded tail growth guard after stale scroll plan / page-height measurement: reread `scrollHeight/maxY` after the last planned frame and capture a limited tail if the page grew. | Patagonia, REI. | Nice to have |
+| Beautiful page splitting. | Do not cut text lines; do not cut cards; do not cut tables through the middle of a row; do not duplicate sticky header; do not leave huge empty fields; do not make pages with different logic. | Product-wide. | Nice to have |
 | White empty zones or rich-media sections do not load. | Image readiness, layout settle, rich-media section readiness. | Sony WH-1000XM5. | Could |
 | App shell / SPA captures as blank. | App-shell loaded-state / readiness guard. | Mermaid Live Editor. | Could |
 | Lazy shift during card cutting. | Page stability before planning and during capture; not split-boundary logic. | Patagonia, Samsung. | Could |

@@ -67,6 +67,7 @@
 | Nice to have | Popup/modal repeats down the stitched page. | Repeated popup / modal overlay normalization. | Patagonia Jackets |
 | Nice to have | First viewport is dimmed, but later frames become light/white while a popup state is still visually active. | Dimmed backdrop continuity / modal overlay state mismatch. | Samsung Galaxy S |
 | Nice to have | Footer is missing from the final capture. | Scroll plan / page-height measurement became stale after lazy/dynamic loading. This is not split/tiling and not card cutting. Add a bounded tail growth guard: after the last planned frame, reread `scrollHeight/maxY`; if the page grew meaningfully, capture the tail with a small frame limit. | Patagonia Jackets, REI Backpacks |
+| Nice to have | Beautiful page splitting. | Do not cut text lines; do not cut cards; do not cut tables through the middle of a row; do not duplicate sticky header; do not leave huge empty fields; do not make pages with different logic. | Product-wide |
 | Could | White empty zones or rich-media sections do not load. | Image readiness, layout settle, rich-media section readiness. | Sony WH-1000XM5 |
 | Could | App shell / SPA captures as blank or white startup state. | App-shell loaded-state / readiness guard. | Mermaid Live Editor |
 | Could | Lazy shift during card cutting. | Lazy shifts that look like card cutting are treated as page stability before planning and during capture, not as split-boundary logic. | Patagonia Jackets, Samsung Galaxy S |

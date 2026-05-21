@@ -103,10 +103,23 @@ MVP behavior:
 
 1. Run the normal capture pipeline once.
 2. Produce a `CaptureArtifact`.
-3. If the artifact is a single bitmap, create PDF pages from that bitmap.
-4. If the artifact is tiled, create PDF pages from tiles.
+3. Export to A4/Letter-style PDF pages, not one infinitely long PDF page.
+4. If the artifact is a single bitmap, create A4/Letter PDF pages from that bitmap.
+5. If the artifact is tiled, create A4/Letter PDF pages from tiles.
 5. Use the same filenames rules as PNG.
 6. Store PDF export status under the existing diagnostics/export section.
+
+Product decision:
+
+```text
+PDF export is page-based: A4/Letter.
+```
+
+First implementation should prefer a narrow default:
+
+```text
+default A4, internal support for Letter, no new UI unless export settings already require it.
+```
 
 PDF diagnostics should look like an export summary:
 
@@ -189,6 +202,7 @@ But we should not do all of this in the first PDF change.
 ## Acceptance Criteria
 
 - PDF export uses the same capture result as PNG.
+- PDF export outputs A4/Letter-style pages, not one infinitely long PDF page.
 - PDF export does not call `PageProbe.measure()`.
 - PDF export does not call `PositionPlanner.createPlan()`.
 - PDF export does not call `CaptureStepper.run()`.
