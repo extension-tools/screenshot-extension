@@ -25,12 +25,56 @@ const positionPlannerSource = fs.readFileSync(
   path.join(codeRoot, 'capture/PositionPlanner.js'),
   'utf8'
 );
+const canvasStitcherSource = fs.readFileSync(
+  path.join(codeRoot, 'capture/CanvasStitcher.js'),
+  'utf8'
+);
+const canvasTilerSource = fs.readFileSync(
+  path.join(codeRoot, 'capture/CanvasTiler.js'),
+  'utf8'
+);
+const canvasSizeGuardSource = fs.readFileSync(
+  path.join(codeRoot, 'capture/CanvasSizeGuard.js'),
+  'utf8'
+);
 
 const SplitBoundaryPlanner = loadSelfClass(splitBoundaryPlannerSource, 'SplitBoundaryPlanner');
 const PositionPlanner = loadSelfClass(
   `${splitBoundaryPlannerSource}\n${positionPlannerSource}`,
   'PositionPlanner'
 );
+const CanvasStitcher = loadSelfClass(
+  `${splitBoundaryPlannerSource}\n${canvasStitcherSource}`,
+  'CanvasStitcher'
+);
+const CanvasTiler = loadSelfClass(
+  `${splitBoundaryPlannerSource}\n${canvasTilerSource}`,
+  'CanvasTiler'
+);
+const CanvasSizeGuard = loadSelfClass(
+  `${splitBoundaryPlannerSource}\n${canvasSizeGuardSource}`,
+  'CanvasSizeGuard'
+);
+
+const createCanvasBoundaryHarness = Class => {
+  const instance = Object.create(Class.prototype);
+  instance.page = {
+    splitCandidates: [],
+    capturePlan: {
+      avoidRanges: [{
+        yStartCssPx: 460,
+        yEndCssPx: 540,
+        reason: 'grid-row'
+      }]
+    },
+    splitExclusionRanges: [{
+      top: 700,
+      bottom: 820,
+      reason: 'legacy'
+    }]
+  };
+  return instance;
+};
 
 {
   const chosen = SplitBoundaryPlanner.chooseSafeSplitBoundary({
@@ -89,6 +133,70 @@ const PositionPlanner = loadSelfClass(
     bottom: 520,
     reason: 'legacy'
   }], 'legacy splitExclusionRanges should remain the fallback');
+}
+
+for (const Class of [CanvasStitcher, CanvasTiler]) {
+  const harness = createCanvasBoundaryHarness(Class);
+  const boundary = harness.chooseVerticalSeamBoundary({
+    current: 300,
+    defaultBoundary: 500
+  });
+
+  assert.ok(
+    boundary < 460,
+    `${Class.name} should shift the seam before a capturePlan avoid range`
+  );
+}
+
+for (const Class of [CanvasStitcher, CanvasTiler]) {
+  const harness = createCanvasBoundaryHarness(Class);
+  harness.page.capturePlan.avoidRanges = [];
+  harness.page.splitExclusionRanges = [{
+    top: 460,
+    bottom: 540,
+    reason: 'legacy'
+  }];
+
+  const boundary = harness.chooseVerticalSeamBoundary({
+    current: 300,
+    defaultBoundary: 500
+  });
+
+  assert.ok(
+    boundary < 460,
+    `${Class.name} should keep legacy splitExclusionRanges as the fallback`
+  );
+}
+
+{
+  const guard = new CanvasSizeGuard({
+    maxDimension: 2000,
+    maxArea: 2000000
+  });
+  const strategy = guard.createStrategy({
+    width: 1000,
+    height: 4000,
+    ratio: 1,
+    splitCandidates: [],
+    capturePlan: {
+      avoidRanges: [{
+        yStartCssPx: 1900,
+        yEndCssPx: 2100,
+        reason: 'grid-row'
+      }]
+    },
+    splitExclusionRanges: [{
+      top: 2500,
+      bottom: 2700,
+      reason: 'legacy'
+    }]
+  });
+
+  assert.equal(strategy.mode, 'tiled-output');
+  assert.ok(
+    strategy.tiles[0].height < 1900,
+    'CanvasSizeGuard should move a tile boundary before a capturePlan avoid range'
+  );
 }
 
 {
