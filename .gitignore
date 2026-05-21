@@ -9,6 +9,8 @@ project/.cache/
 project/tests/capture-results/
 project/tests/diagnostic-crops/
 project/tests/generated/
+# Golden baseline screenshots are local QA inputs; never commit large PNG baselines.
+project/tests/golden-baselines/real-sites/*.png
 project/tests/visual-results/
 
 # Transient QA/research run reports.
