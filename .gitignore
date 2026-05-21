@@ -20,6 +20,10 @@ project/tests/broad-*.md
 project/tests/wide-card-*.md
 project/tests/targeted-*.md
 
+# Rendered documentation exports are generated review artifacts.
+# Keep the Markdown source of truth in Git instead.
+project/docs/*.pdf
+
 # Local saved real-site HTML dumps for investigation.
 # Keep these out of Git; promote small reusable fixtures separately.
 project/tests/HTML Complicated Sites/
