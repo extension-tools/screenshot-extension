@@ -1,6 +1,7 @@
 self.CaptureStore = class CaptureStore {
   constructor({chrome}) {
     this.chrome = chrome;
+    this.downloadCompleteTimeoutMs = 60000;
   }
 
   sanitizeFilenamePart(value, fallback = 'Page') {
@@ -178,57 +179,176 @@ self.CaptureStore = class CaptureStore {
     return mime.split('/')[1].split(';')[0];
   }
 
-  download({url, filename, extension, saveAs}) {
+  nowIso() {
+    return new Date().toISOString();
+  }
+
+  requestDownload({url, filename, saveAs}) {
     return new Promise(resolve => {
-      const attempts = [];
-      const tryDownload = candidateFilename => {
-        this.chrome.downloads.download({
-          url,
-          filename: candidateFilename,
-          saveAs
-        }, downloadId => {
-          const lastError = this.chrome.runtime.lastError;
-          attempts.push({
-            filename: candidateFilename,
-            downloadId: downloadId || null,
-            error: lastError?.message || null
-          });
-          resolve({
-            ok: !lastError,
-            filename: candidateFilename,
-            downloadId: downloadId || null,
-            error: lastError?.message || null,
-            attempts
-          });
-        });
-      };
-      const finalFilename = this.filenameWithExtension(filename, extension);
+      const startedAt = this.nowIso();
 
       this.chrome.downloads.download({
         url,
-        filename: finalFilename,
+        filename,
         saveAs
       }, downloadId => {
         const lastError = this.chrome.runtime.lastError;
-        attempts.push({
-          filename: finalFilename,
-          downloadId: downloadId || null,
-          error: lastError?.message || null
-        });
-        if (lastError) {
-          tryDownload('image.' + extension);
-          return;
-        }
-
         resolve({
-          ok: true,
-          filename: finalFilename,
+          ok: !lastError,
+          filename,
           downloadId: downloadId || null,
-          error: null,
-          attempts
+          error: lastError?.message || null,
+          startedAt,
+          acceptedAt: this.nowIso()
         });
       });
     });
+  }
+
+  createDownloadLifecycle(download, waitStatus = 'not_started') {
+    return {
+      downloadId: download.downloadId || null,
+      filename: download.filename,
+      startedAt: download.startedAt || null,
+      acceptedAt: download.acceptedAt || null,
+      completedAt: null,
+      waitStatus,
+      finalState: null,
+      interruptedReason: null,
+      events: []
+    };
+  }
+
+  waitForDownloadComplete(download) {
+    const lifecycle = this.createDownloadLifecycle(download);
+
+    if (!download.ok || !download.downloadId) {
+      lifecycle.waitStatus = download.ok ? 'missing_download_id' : 'skipped_failed_start';
+      return Promise.resolve(lifecycle);
+    }
+
+    if (!this.chrome.downloads?.onChanged?.addListener) {
+      lifecycle.waitStatus = 'unsupported';
+      return Promise.resolve(lifecycle);
+    }
+
+    return new Promise(resolve => {
+      let settled = false;
+      let timeoutId = null;
+      const finish = updates => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        this.chrome.downloads.onChanged.removeListener(listener);
+        Object.assign(lifecycle, updates);
+        resolve(lifecycle);
+      };
+      const finishFromItem = item => {
+        if (!item?.state || item.state === 'in_progress') {
+          return false;
+        }
+
+        finish({
+          completedAt: item.endTime || this.nowIso(),
+          waitStatus: item.state === 'complete' ? 'complete' : 'interrupted',
+          finalState: item.state,
+          interruptedReason: item.error || null
+        });
+        return true;
+      };
+      const listener = delta => {
+        if (delta?.id !== download.downloadId) {
+          return;
+        }
+
+        lifecycle.events.push({
+          at: this.nowIso(),
+          state: delta.state?.current || null,
+          error: delta.error?.current || null
+        });
+
+        if (delta.state?.current === 'complete') {
+          finish({
+            completedAt: this.nowIso(),
+            waitStatus: 'complete',
+            finalState: 'complete',
+            interruptedReason: null
+          });
+        }
+        else if (delta.state?.current === 'interrupted') {
+          finish({
+            completedAt: this.nowIso(),
+            waitStatus: 'interrupted',
+            finalState: 'interrupted',
+            interruptedReason: delta.error?.current || 'interrupted'
+          });
+        }
+      };
+
+      timeoutId = setTimeout(() => {
+        finish({
+          completedAt: this.nowIso(),
+          waitStatus: 'timeout',
+          finalState: 'unknown',
+          interruptedReason: null
+        });
+      }, this.downloadCompleteTimeoutMs);
+
+      this.chrome.downloads.onChanged.addListener(listener);
+
+      if (this.chrome.downloads.search) {
+        this.chrome.downloads.search({id: download.downloadId}, items => {
+          const lastError = this.chrome.runtime.lastError;
+          if (settled || lastError) {
+            return;
+          }
+          finishFromItem(items?.[0]);
+        });
+      }
+    });
+  }
+
+  async download({url, filename, extension, saveAs, waitForCompletion = true, requireCompletion = false}) {
+    const attempts = [];
+    const finalFilename = this.filenameWithExtension(filename, extension);
+
+    let download = await this.requestDownload({
+      url,
+      filename: finalFilename,
+      saveAs
+    });
+    attempts.push(download);
+
+    if (!download.ok) {
+      download = await this.requestDownload({
+        url,
+        filename: 'image.' + extension,
+        saveAs
+      });
+      attempts.push(download);
+    }
+
+    const lifecycle = waitForCompletion ?
+      await this.waitForDownloadComplete(download) :
+      this.createDownloadLifecycle(download, 'not_observed');
+    const lifecycleError = lifecycle.waitStatus === 'interrupted' ?
+      (lifecycle.interruptedReason || 'Download interrupted.') :
+      requireCompletion && lifecycle.waitStatus === 'timeout' ?
+        'Download completion timed out.' :
+        null;
+
+    return {
+      ok: download.ok && !lifecycleError,
+      filename: download.filename,
+      downloadId: download.downloadId || null,
+      error: download.error || lifecycleError,
+      attempts,
+      lifecycle
+    };
   }
 
   async save(blob, tab) {
@@ -244,7 +364,9 @@ self.CaptureStore = class CaptureStore {
       url,
       filename,
       extension,
-      saveAs: prefs.saveAs
+      saveAs: prefs.saveAs,
+      waitForCompletion: true,
+      requireCompletion: true
     });
 
     return {
@@ -255,6 +377,7 @@ self.CaptureStore = class CaptureStore {
         filename: download.filename,
         extension,
         downloadId: download.downloadId,
+        lifecycle: download.lifecycle,
         ok: download.ok,
         error: download.error
       }],
@@ -280,7 +403,9 @@ self.CaptureStore = class CaptureStore {
         url,
         filename: `${filename} - part ${String(file.index + 1).padStart(2, '0')} of ${String(file.total).padStart(2, '0')}`,
         extension,
-        saveAs: false
+        saveAs: false,
+        waitForCompletion: true,
+        requireCompletion: true
       });
 
       statuses.push({
@@ -289,6 +414,7 @@ self.CaptureStore = class CaptureStore {
         filename: download.filename,
         extension,
         downloadId: download.downloadId,
+        lifecycle: download.lifecycle,
         width: file.width,
         height: file.height,
         ok: download.ok,
