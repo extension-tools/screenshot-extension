@@ -66,13 +66,21 @@ self.CanvasSizeGuard = class CanvasSizeGuard {
       .map(value => Math.round(value * page.ratio))
       .filter(value => Number.isFinite(value) && value > 0 && value < height)
       .sort((a, b) => a - b);
-    const exclusionRanges = (page.splitExclusionRanges || [])
+    const capturePlanRanges = (page.capturePlan?.avoidRanges || [])
+      .map(range => ({
+        top: Math.round(range.yStartCssPx * page.ratio),
+        bottom: Math.round(range.yEndCssPx * page.ratio),
+        reason: range.reason
+      }))
+      .filter(range => Number.isFinite(range.top) && Number.isFinite(range.bottom) && range.bottom > range.top);
+    const legacyRanges = (page.splitExclusionRanges || [])
       .map(range => ({
         top: Math.round(range.top * page.ratio),
         bottom: Math.round(range.bottom * page.ratio),
         reason: range.reason
       }))
-      .filter(range => Number.isFinite(range.top) && Number.isFinite(range.bottom) && range.bottom > range.top)
+      .filter(range => Number.isFinite(range.top) && Number.isFinite(range.bottom) && range.bottom > range.top);
+    const exclusionRanges = (capturePlanRanges.length ? capturePlanRanges : legacyRanges)
       .sort((a, b) => a.top - b.top);
     const tiles = [];
     let y = 0;
@@ -103,47 +111,28 @@ self.CanvasSizeGuard = class CanvasSizeGuard {
 
   findSafeBoundary({y, hardLimit, height, tilePixelHeight, candidates, exclusionRanges = []}) {
     const minHeight = Math.max(1200, Math.floor(tilePixelHeight * 0.45));
-    const searchWindow = Math.min(2400, Math.max(720, Math.floor(tilePixelHeight * 0.18)));
     const minBoundary = y + minHeight;
     const maxBoundary = hardLimit;
-    const preferredStart = Math.max(minBoundary, hardLimit - searchWindow);
     const remainingAfterHardLimit = height - hardLimit;
 
     if (remainingAfterHardLimit > 0 && remainingAfterHardLimit < minHeight) {
       return hardLimit;
     }
 
-    const blockingRange = exclusionRanges.find(range =>
-      hardLimit > range.top &&
-      hardLimit < range.bottom &&
-      range.bottom - range.top < tilePixelHeight
-    );
-
-    if (blockingRange && blockingRange.top >= minBoundary) {
-      const beforeRange = candidates
-        .filter(candidate =>
-          candidate >= minBoundary &&
-          candidate <= blockingRange.top &&
-          !this.isInsideExclusion(candidate, exclusionRanges)
-        )
-        .sort((a, b) => Math.abs(blockingRange.top - a) - Math.abs(blockingRange.top - b))[0];
-
-      return beforeRange || blockingRange.top;
+    if (!self.SplitBoundaryPlanner) {
+      return hardLimit;
     }
 
-    const nearby = candidates
-      .filter(candidate =>
-        candidate >= preferredStart &&
-        candidate <= maxBoundary &&
-        !this.isInsideExclusion(candidate, exclusionRanges)
-      )
-      .sort((a, b) => Math.abs(hardLimit - a) - Math.abs(hardLimit - b))[0];
+    const planned = self.SplitBoundaryPlanner.chooseSafeSplitBoundary({
+      targetY: hardLimit,
+      minY: minBoundary,
+      maxY: maxBoundary,
+      ranges: exclusionRanges,
+      candidates,
+      searchWindowPx: Math.max(0, hardLimit - minBoundary)
+    });
 
-    return nearby || hardLimit;
-  }
-
-  isInsideExclusion(value, exclusionRanges) {
-    return exclusionRanges.some(range => value > range.top && value < range.bottom);
+    return Number.isFinite(planned?.actualY) ? planned.actualY : hardLimit;
   }
 
   assertCanCreateSingleCanvas(page) {

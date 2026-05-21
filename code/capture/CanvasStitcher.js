@@ -150,23 +150,20 @@ self.CanvasStitcher = class CanvasStitcher {
 
 	  chooseVerticalSeamBoundary({current, defaultBoundary}) {
 	    const ranges = this.normalizeExclusionRanges();
-	    if (!ranges.length || !this.isInsideExclusion(defaultBoundary, ranges)) {
+	    if (!ranges.length || !self.SplitBoundaryPlanner) {
 	      return defaultBoundary;
 	    }
 
-	    const candidates = [
-	      ...this.normalizeSplitCandidates(),
-	      ...ranges.flatMap(range => [range.top, range.bottom])
-	    ]
-	      .filter(boundary =>
-	        Number.isFinite(boundary) &&
-	        boundary >= current &&
-	        boundary <= defaultBoundary &&
-	        this.isAllowedSeamBoundary(boundary, ranges)
-	      )
-	      .sort((a, b) => Math.abs(defaultBoundary - a) - Math.abs(defaultBoundary - b));
+	    const planned = self.SplitBoundaryPlanner.chooseSafeSplitBoundary({
+	      targetY: defaultBoundary,
+	      minY: current,
+	      maxY: defaultBoundary,
+	      ranges,
+	      candidates: this.normalizeSplitCandidates(),
+	      searchWindowPx: Math.max(0, defaultBoundary - current)
+	    });
 
-	    return candidates[0] || defaultBoundary;
+	    return Number.isFinite(planned?.actualY) ? planned.actualY : defaultBoundary;
 	  }
 
 	  normalizeSplitCandidates() {
@@ -177,7 +174,18 @@ self.CanvasStitcher = class CanvasStitcher {
 	  }
 
 	  normalizeExclusionRanges() {
-	    return (this.page.splitExclusionRanges || [])
+	    const capturePlanRanges = (this.page.capturePlan?.avoidRanges || [])
+	      .map(range => ({
+	        top: Number(range?.yStartCssPx),
+	        bottom: Number(range?.yEndCssPx),
+	        reason: range?.reason
+	      }))
+	      .filter(range =>
+	        Number.isFinite(range.top) &&
+	        Number.isFinite(range.bottom) &&
+	        range.bottom > range.top
+	      );
+	    const legacyRanges = (this.page.splitExclusionRanges || [])
 	      .map(range => ({
 	        top: Number(range?.top),
 	        bottom: Number(range?.bottom),
@@ -187,29 +195,10 @@ self.CanvasStitcher = class CanvasStitcher {
 	        Number.isFinite(range.top) &&
 	        Number.isFinite(range.bottom) &&
 	        range.bottom > range.top
-	      )
+	      );
+
+	    return (capturePlanRanges.length ? capturePlanRanges : legacyRanges)
 	      .sort((a, b) => a.top - b.top);
-	  }
-
-	  isInsideExclusion(value, ranges) {
-	    return ranges.some(range => value > range.top && value < range.bottom);
-	  }
-
-	  isAllowedSeamBoundary(value, ranges) {
-	    if (!this.isInsideExclusion(value, ranges)) {
-	      return true;
-	    }
-
-	    const isRangeEdge = ranges.some(range => value === range.top || value === range.bottom);
-	    if (!isRangeEdge) {
-	      return false;
-	    }
-
-	    return !ranges.some(range =>
-	      range.reason === 'split-sensitive-block' &&
-	      value > range.top &&
-	      value < range.bottom
-	    );
 	  }
 
   getAxisOverlap({current, previous, viewportSize, fallback}) {

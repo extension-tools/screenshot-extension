@@ -9,21 +9,22 @@ self.PositionPlanner = class PositionPlanner {
 	      page.scrollPlanWidth || page.width,
 	      page.scrollPlanViewportWidth || page.w
 	    );
-	    const yPositions = this.createYAxisPositions(
+	    const yPlan = this.createYAxisPlan(
 	      page.scrollPlanHeight || page.height,
 	      page.scrollPlanViewportHeight || page.h,
 	      page
 	    );
 
     for (const x of xPositions) {
-      for (const y of yPositions) {
+      for (const y of yPlan.positions) {
         positions.push({x, y});
       }
     }
 
     return {
       positions,
-      total: positions.length
+      total: positions.length,
+      splitBoundaryDiagnostics: yPlan.splitBoundaryDiagnostics
     };
   }
 
@@ -46,9 +47,16 @@ self.PositionPlanner = class PositionPlanner {
 	  }
 
 	  createYAxisPositions(totalSize, viewportSize, page = {}) {
-	    const ranges = this.normalizeExclusionRanges(page.splitExclusionRanges, totalSize);
+	    return this.createYAxisPlan(totalSize, viewportSize, page).positions;
+	  }
+
+	  createYAxisPlan(totalSize, viewportSize, page = {}) {
+	    const ranges = self.SplitBoundaryPlanner.normalizeCapturePlanRanges(page, totalSize);
 	    if (!ranges.length) {
-	      return this.createAxisPositions(totalSize, viewportSize);
+	      return {
+	        positions: this.createAxisPositions(totalSize, viewportSize),
+	        splitBoundaryDiagnostics: []
+	      };
 	    }
 
 	    const max = Math.max(0, totalSize - viewportSize);
@@ -59,6 +67,7 @@ self.PositionPlanner = class PositionPlanner {
 	    const maxExtraOverlap = Math.max(safeOffset, Math.min(Math.floor(viewportSize * 0.55), 520));
 	    const candidates = this.normalizeSplitCandidates(page.splitCandidates, totalSize);
 	    const positions = [0];
+	    const splitBoundaryDiagnostics = [];
 	    let guard = 0;
 
 	    while (positions[positions.length - 1] < max && guard < 10000) {
@@ -76,25 +85,29 @@ self.PositionPlanner = class PositionPlanner {
 	        candidates,
 	        ranges
 	      });
+	      splitBoundaryDiagnostics.push(adjusted.diagnostics);
 
-	      if (adjusted >= max) {
+	      if (adjusted.position >= max) {
 	        positions.push(max);
 	        break;
 	      }
 
-	      if (adjusted <= previous) {
+	      if (adjusted.position <= previous) {
 	        positions.push(Math.min(max, previous + step));
 	        continue;
 	      }
 
-	      positions.push(adjusted);
+	      positions.push(adjusted.position);
 	    }
 
 	    if (positions[positions.length - 1] !== max) {
 	      positions.push(max);
 	    }
 
-	    return positions.filter((position, index, list) => index === 0 || position > list[index - 1]);
+	    return {
+	      positions: positions.filter((position, index, list) => index === 0 || position > list[index - 1]),
+	      splitBoundaryDiagnostics
+	    };
 	  }
 
 	  adjustPositionForSafeSeam({
@@ -108,47 +121,58 @@ self.PositionPlanner = class PositionPlanner {
 	    candidates,
 	    ranges
 	  }) {
-	    if (proposed <= previous || proposed >= max) {
-	      return proposed;
-	    }
+	    const targetBoundary = previous + viewportSize;
 
-	    const defaultBoundary = previous + viewportSize;
-	    const blockingRange = ranges.find(range => this.isInsideExclusion(defaultBoundary, [range]));
-	    if (!blockingRange) {
-	      return proposed;
+	    if (proposed <= previous || proposed >= max) {
+	      return {
+	        position: proposed,
+	        diagnostics: self.SplitBoundaryPlanner.createBoundaryDiagnostic({
+	          targetY: targetBoundary,
+	          actualY: targetBoundary,
+	          severity: 'safe',
+	          confidence: 0.9,
+	          reason: proposed >= max ? 'last-frame' : 'no-adjustment'
+	        })
+	      };
 	    }
 
 	    const lowerPositionLimit = previous + minProgress;
-	    const preferredBoundaries = [
-	      ...candidates,
-	      blockingRange.top,
-	      blockingRange.bottom,
-	      ...ranges.flatMap(range => [range.top, range.bottom])
-	    ]
-	      .filter(boundary =>
-	        Number.isFinite(boundary) &&
-	        boundary > previous &&
-	        boundary <= defaultBoundary &&
-	        this.isAllowedSeamBoundary(boundary, ranges)
-	      )
-	      .sort((a, b) => Math.abs(defaultBoundary - a) - Math.abs(defaultBoundary - b));
+	    const safeBoundary = self.SplitBoundaryPlanner.chooseSafeSplitBoundary({
+	      targetY: targetBoundary,
+	      minY: lowerPositionLimit + safeOffset,
+	      maxY: targetBoundary,
+	      ranges,
+	      candidates,
+	      searchWindowPx: maxExtraOverlap
+	    });
+	    const adjusted = Math.min(
+	      proposed,
+	      Math.max(lowerPositionLimit, Math.floor(safeBoundary.actualY - Math.max(1, safeOffset)))
+	    );
 
-	    for (const boundary of preferredBoundaries) {
-	      if (defaultBoundary - boundary > maxExtraOverlap) {
-	        continue;
-	      }
-
-	      const adjusted = Math.min(
-	        proposed,
-	        Math.max(lowerPositionLimit, Math.floor(boundary - Math.max(1, safeOffset)))
-	      );
-
-	      if (adjusted > previous && adjusted <= proposed && adjusted <= boundary) {
-	        return adjusted;
-	      }
+	    if (adjusted <= previous || adjusted > proposed) {
+	      return {
+	        position: proposed,
+	        diagnostics: self.SplitBoundaryPlanner.createBoundaryDiagnostic({
+	          targetY: targetBoundary,
+	          actualY: targetBoundary,
+	          severity: safeBoundary.severity,
+	          confidence: 0.25,
+	          reason: 'safe-boundary-out-of-position-limits'
+	        })
+	      };
 	    }
 
-	    return proposed;
+	    return {
+	      position: adjusted,
+	      diagnostics: self.SplitBoundaryPlanner.createBoundaryDiagnostic({
+	        targetY: targetBoundary,
+	        actualY: safeBoundary.actualY,
+	        severity: safeBoundary.severity,
+	        confidence: safeBoundary.confidence,
+	        reason: safeBoundary.reason
+	      })
+	    };
 	  }
 
 	  normalizeSplitCandidates(values = [], totalSize) {
@@ -156,28 +180,6 @@ self.PositionPlanner = class PositionPlanner {
 	      .map(value => Number(value))
 	      .filter(value => Number.isFinite(value) && value > 0 && value < totalSize)
 	      .sort((a, b) => a - b);
-	  }
-
-	  normalizeExclusionRanges(values = [], totalSize) {
-	    return values
-	      .map(range => ({
-	        top: Number(range?.top),
-	        bottom: Number(range?.bottom),
-	        reason: range?.reason
-	      }))
-	      .filter(range =>
-	        Number.isFinite(range.top) &&
-	        Number.isFinite(range.bottom) &&
-	        range.bottom > range.top &&
-	        range.bottom > 0 &&
-	        range.top < totalSize
-	      )
-	      .map(range => ({
-	        ...range,
-	        top: Math.max(0, range.top),
-	        bottom: Math.min(totalSize, range.bottom)
-	      }))
-	      .sort((a, b) => a.top - b.top);
 	  }
 
 	  isInsideExclusion(value, ranges) {
