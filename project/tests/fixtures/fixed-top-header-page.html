@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Fixed Top Header Fixture</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f6f7fb;
+      color: #151923;
+    }
+
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      height: 84px;
+      background: rgb(246, 57, 57);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 56px;
+      box-sizing: border-box;
+      box-shadow: 0 8px 20px rgba(20, 20, 30, 0.2);
+    }
+
+    .site-header nav {
+      display: flex;
+      gap: 28px;
+      font-weight: 700;
+    }
+
+    main {
+      padding-top: 120px;
+    }
+
+    section {
+      min-height: 620px;
+      padding: 72px 96px;
+      border-bottom: 1px solid #d7dce8;
+      box-sizing: border-box;
+    }
+
+    section:nth-child(odd) {
+      background: #eef2ff;
+    }
+
+    h1,
+    h2 {
+      font-size: 52px;
+      margin: 0 0 24px;
+    }
+
+    p {
+      max-width: 720px;
+      font-size: 24px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header" role="banner" aria-label="Site navigation">
+    <strong>Fixed Header</strong>
+    <nav aria-label="Primary navigation">
+      <span>Shop</span>
+      <span>Learn</span>
+      <span>Support</span>
+      <span>Search</span>
+    </nav>
+  </header>
+  <main>
+    <section>
+      <h1>First viewport content</h1>
+      <p>The red fixed header should be visible here because this is the user-visible first frame.</p>
+    </section>
+    <section>
+      <h2>Second section</h2>
+      <p>The red fixed header must not repeat in this region of the final full-page screenshot.</p>
+    </section>
+    <section>
+      <h2>Third section</h2>
+      <p>Deep content remains visible after the header is hidden on later capture frames.</p>
+    </section>
+    <section>
+      <h2>Final section</h2>
+      <p>This section makes the page tall enough to require several capture frames.</p>
+    </section>
+  </main>
+</body>
+</html>

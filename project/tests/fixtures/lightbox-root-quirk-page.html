@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lightbox Root Quirk Fixture</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      background: rgb(210, 30, 140);
+    }
+
+    .under-page {
+      min-height: 2600px;
+      padding: 80px;
+      color: #fff;
+    }
+
+    #lightbox-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      overflow: auto;
+      background: rgb(12, 16, 32);
+      color: #fff;
+    }
+
+    .lightbox-inner {
+      width: min(1040px, calc(100% - 96px));
+      margin: 0 auto;
+      padding: 64px 0 120px;
+    }
+
+    figure {
+      margin: 0 0 64px;
+      min-height: 620px;
+      border-radius: 28px;
+      background: rgb(28, 110, 220);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    svg {
+      width: 360px;
+      height: 220px;
+    }
+
+    .tail-marker {
+      height: 240px;
+      border-radius: 24px;
+      background: rgb(40, 190, 120);
+    }
+  </style>
+</head>
+<body>
+  <div class="under-page">
+    <h1>Page behind the viewer</h1>
+    <p>This red page should not become the capture root while a known lightbox is open.</p>
+  </div>
+
+  <div id="lightbox-wrap" role="dialog" aria-label="Image gallery viewer">
+    <div class="lightbox-inner">
+      <figure>
+        <svg viewBox="0 0 360 220" role="img" aria-label="Gallery image">
+          <rect width="360" height="220" rx="32" fill="rgb(255, 170, 20)"></rect>
+          <circle cx="108" cy="110" r="48" fill="rgb(245, 120, 40)"></circle>
+          <rect x="180" y="68" width="96" height="84" rx="18" fill="rgb(20, 180, 120)"></rect>
+        </svg>
+      </figure>
+      <h1>Known lightbox root</h1>
+      <p>The capture should scroll this viewer, not the underlying document.</p>
+      <figure>
+        <svg viewBox="0 0 360 220" role="img" aria-label="Second gallery image">
+          <rect width="360" height="220" rx="32" fill="rgb(80, 120, 255)"></rect>
+          <circle cx="116" cy="110" r="52" fill="rgb(255, 170, 20)"></circle>
+          <rect x="190" y="72" width="96" height="76" rx="18" fill="rgb(40, 190, 120)"></rect>
+        </svg>
+      </figure>
+      <div class="tail-marker"></div>
+    </div>
+  </div>
+</body>
+</html>

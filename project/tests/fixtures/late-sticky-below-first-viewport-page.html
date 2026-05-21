@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Late sticky below first viewport</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7fafc;
+      color: #152033;
+    }
+
+    .intro {
+      height: 1120px;
+      padding: 80px;
+      background: linear-gradient(#eef5ff, #f7fafc);
+      border-bottom: 6px solid #c8d6e5;
+    }
+
+    .intro h1 {
+      margin: 0 0 24px;
+      font-size: 54px;
+    }
+
+    .late-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 72px;
+      padding: 20px 80px;
+      background: rgb(255, 64, 180);
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 56px 80px 140px;
+    }
+
+    .block {
+      min-height: 420px;
+      margin: 0 0 28px;
+      padding: 42px;
+      border: 3px solid #193a6a;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .block:nth-child(2n) {
+      background: #e9fff4;
+    }
+
+    .bottom-marker {
+      min-height: 240px;
+      padding: 56px;
+      background: rgb(20, 180, 120);
+      color: #042014;
+      font-size: 32px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <section class="intro">
+    <h1>No sticky elements in the first viewport</h1>
+    <p>The sticky strip starts below the first viewport. PageProbe should not need to see it before capture starts.</p>
+  </section>
+
+  <div class="late-sticky">Late sticky strip should become normal flow once, not repeat.</div>
+
+  <main class="content">
+    <section class="block">
+      <h2>Section one</h2>
+      <p>Long content below the late sticky strip.</p>
+    </section>
+    <section class="block">
+      <h2>Section two</h2>
+      <p>The capture should continue normally without keeping the strip pinned.</p>
+    </section>
+    <section class="block">
+      <h2>Section three</h2>
+      <p>If sticky normalization is gated on first viewport detection, the strip repeats here.</p>
+    </section>
+    <section class="block">
+      <h2>Section four</h2>
+      <p>Blanket sticky normalization should catch this even without fixed_sticky risk flags.</p>
+    </section>
+    <section class="bottom-marker">Bottom marker captured.</section>
+  </main>
+</body>
+</html>

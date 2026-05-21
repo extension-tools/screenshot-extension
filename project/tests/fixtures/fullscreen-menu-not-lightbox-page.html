@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fullscreen Menu Not Lightbox Fixture</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      background: rgb(230, 20, 20);
+    }
+
+    .under-page {
+      min-height: 2400px;
+      padding: 80px;
+      color: #fff;
+    }
+
+    .fullscreen-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 32px;
+      padding: 80px;
+      box-sizing: border-box;
+      background: rgb(42, 48, 66);
+      color: #fff;
+    }
+
+    .fullscreen-menu a {
+      color: #fff;
+      font-size: 32px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="under-page">
+    <h1>Page behind fullscreen menu</h1>
+    <p>This page should remain the window capture root.</p>
+  </main>
+
+  <nav class="fullscreen-menu" aria-label="Fullscreen navigation">
+    <a href="#">Products</a>
+    <a href="#">Solutions</a>
+    <a href="#">Docs</a>
+    <a href="#">Pricing</a>
+    <a href="#">Company</a>
+    <a href="#">Support</a>
+  </nav>
+</body>
+</html>

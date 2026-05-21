@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fixed Background Quirk Fixture</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, sans-serif;
+      background: transparent;
+    }
+
+    .ambient-background {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgb(18, 70, 120), rgb(18, 70, 120));
+    }
+
+    main {
+      width: min(960px, calc(100% - 96px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      color: #fff;
+    }
+
+    section {
+      min-height: 720px;
+      padding: 80px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 24px;
+      font-size: 56px;
+      line-height: 1.05;
+    }
+
+    p {
+      max-width: 620px;
+      font-size: 22px;
+      line-height: 1.45;
+    }
+
+    .tail-marker {
+      width: 260px;
+      height: 180px;
+      margin-top: 80px;
+      background: rgb(40, 190, 120);
+      border-radius: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-background" aria-hidden="true"></div>
+  <main>
+    <section>
+      <h1>Fixed design background</h1>
+      <p>This page uses a viewport-fixed visual background that should remain part of every captured frame.</p>
+    </section>
+    <section>
+      <h2>Middle content</h2>
+      <p>If the fixed layer is converted like a sticky header, later frames lose the blue design background.</p>
+    </section>
+    <section>
+      <h2>Final section</h2>
+      <p>The green marker proves the full page was still captured while the fixed background stayed visible.</p>
+      <div class="tail-marker"></div>
+    </section>
+  </main>
+</body>
+</html>
