@@ -1,122 +1,108 @@
 # Current Context
 
-Use this file first when restoring context for Screenshot Extension work. Read the larger docs only when the task needs their detail.
+Use this file first when restoring context for Screenshot Extension work. It is intentionally short. For details, follow the source-of-truth links at the bottom instead of expanding this file.
 
 ## Product Goal
 
-Screenshot Extension is a Chrome MV3 extension for one-click full-page PNG capture from real websites. The current beta goal is stable PNG capture on macOS for normal pages, product/ecommerce pages, docs/blog/wiki pages, and selected app-shell pages.
+Screenshot Extension is a Chrome MV3 extension for one-click full-page capture from real websites. Decision update on 2026-05-20: PDF export and user communication are Must product work on top of PNG correctness.
+
+## Development Principle
+
+- Prefer simple, mechanical, understandable capture logic over complex generalized systems.
+- Keep screenshots fast on simple and medium pages.
+- On difficult pages, prioritize quality and stability without adding combinatorial rules or site-mode complexity.
 
 ## Current Scope
 
 - Chrome-only MV3 extension in `code/`.
-- One primary command: `Capture Entire Page`.
-- PNG downloads through Chrome downloads.
+- Main command: `Capture Entire Page`.
+- PNG downloads through Chrome downloads; multi-part PNG output for very tall pages.
 - Full-page capture by viewport stepping and canvas stitching.
-- Multi-part PNG output for very tall pages.
-- Original scroll restoration after success or failure.
-- Fixed/sticky normalization after frame 0.
-- Explicit `capturePolicy` derived from engine `riskFlags`, including `visible_nav_overlay`: preserve frame 0, then suppress/normalize repeated nav overlay chrome on frames 1+.
-- Runtime capture policy is documented in `project/docs/capture-risk-policy.md`: engine `riskFlags` are separate from QA-only `deepQa.riskTags`.
-- Lazy-load warmup and per-frame image readiness waits.
-- One high-confidence internal scroll container for app-shell pages.
-- Visible-width behavior for horizontal app-shell/workspace content.
+- Lazy warmup, per-frame image readiness waits, original scroll restoration.
+- Fixed/sticky policy: `fixed` remains frame-aware; reachable `position: sticky` nodes are moved to normal flow after warmup and final measure/plan.
+- Explicit `capturePolicy` derives from engine `riskFlags`: `fixed_sticky`, `blocking_modal`, `inaccessible_iframe`.
+- Runtime policy source of truth: `project/docs/capture-risk-policy.md`.
+- One high-confidence internal scroll container only, and only when window scroll is not meaningful.
+- Small `QuirksLayer` hooks exist only for narrow reversible exceptions: passive fixed design backgrounds and known `#lightbox-wrap` fullscreen lightbox roots.
 
-## Current Product Rules
+## Product Rules
 
-- Visible overlays present at capture start must appear in the first viewport only and must not repeat down the page.
-- Blocking popups that prevent normal user scrolling, and entry-gate interstitials that replace the user's capture state, must be captured as the user-visible blocked first viewport only. The extension must not hide the popup and scroll the background as if the user closed it.
-- Large popups that appear during scroll but do not clearly block user scrolling should not automatically stop capture. Continue capture, suppress repeated overlay artifacts where possible, and classify uncertain cases for review instead of `PASS_AUTO`.
-- Routine successful real-site captures should be `PASS_AUTO`.
-- Complex but readable captures can be `SAMPLE REVIEW`.
-- Quality-risk captures should be `UNSTABLE SITE`.
-- Login, bot, consent, and access walls should be `BLOCKED LOGIN` or `BLOCKED ACCESS`, not engine failures.
+- Visible overlays present at capture start should appear in the first viewport only and must not repeat down the page.
+- Blocking popups that technically prevent normal scrolling are captured as the user-visible first viewport only.
+- Entry-gate text alone is diagnostic, not a hard stop. Without scroll lock, continue full-page and route uncertain large-dialog states to review.
+- Large fixed/sticky overlays without proven scroll lock use a runtime scroll probe, but this does not close user-blocking overlays when programmatic scroll still moves the page. That deeper user-scroll/pointer-blocking class is backlog, not current release focus.
+- Large popups that do not clearly block scrolling should not automatically stop capture.
+- Routine successful real-site captures are `PASS_AUTO`; complex but readable captures are `SAMPLE REVIEW`; quality-risk captures are `UNSTABLE SITE`.
+- Login, bot, consent, and access walls are `BLOCKED LOGIN` or `BLOCKED ACCESS`, not engine failures.
 - Empty/blank output, right-side blank/gray strips, first-viewport mismatch, and over-wide output are `FAIL`.
 
-## Current Risk Cases
+## Current Product Priorities
 
-- LEGO Millennium Falcon: blocking popup / capture-state mismatch. Current fix captures one visible viewport when the LEGO Play Zone or similar entry-gate interstitial appears.
-- Nike Air Force 1: same blocking-popup product rule as LEGO. Manual user capture in the blocked-popup state produces only the first visible viewport, which is the expected result. If automation captures the full site behind the popup, that artifact is invalid for that state. Nike is grouped immediately after LEGO in `real-sites.json`.
-- Mermaid Live Editor: blank app-shell startup/readiness risk. Current runner guard waits for non-blank app-shell state; the latest targeted smoke was not white.
-- Microsoft Surface Pro: over-wide output / right-side gray blank-space risk. Current `PageProbe` width clamp fixes the 8000px/right-gray output; transient patience/error pages should be classified as blocked/access-like.
-- REI Backpacks: latest manual review found three active defects: product cards are cut by PNG part boundaries, left sidebar subcategories duplicate, and the left `Store Pickup` / shipping form repeats even though it appears only once on the live site. The saved REI HTML shows the root cause pattern: real product tiles are narrow `li` grid items with generated class names, and the left filter is a narrow `position: sticky` panel with its own vertical scroll and generated class names. Treat as product-card split-boundary plus repeated sticky filter/sidebar chrome, not only deferred image-readiness. Controlled coverage exists in `rei-backpacks-product-grid-page`, which uses REI-like generated classes, forces tiled output, and checks that PNG part boundaries avoid product-card interiors while sidebar form/category markers appear once and do not duplicate.
-- Patagonia Jackets: latest manual review found two active defects: the left product filter sidebar (`In-Store Pickup`, categories, size/color filters) repeats down the product grid, and product cards are cut by PNG part boundaries. Multi-part slicing should respect product-card boundaries so a card fits fully inside a generated screenshot part instead of being clipped.
-- Sony WH-1000XM5: current manual review found multiple active defects: the product title/hero section is duplicated, the first-screen headphone image is clipped and a headphone fragment is shifted below the duplicated title, a lower block is missing its background image/left-side text and renders mostly white, and another block is height-clipped so image/text are cut near the top. Treat as active product-hero duplication, missing-content/image-readiness, seam/split-boundary, and black-strip/layout-shift risk, not a deferred-only investigation.
-- TypeScript Handbook: manual first-half review found the left docs sidebar captured multiple times. Treat as repeated navigation/sidebar chrome defect while capturing main documentation content.
-- JSFiddle, Figma Community, and GoPro HERO are manually accepted unless a new artifact shows a new defect.
-- Cypress Docs second-half sample is acceptable for beta, but has minor right contents/sidebar text clipping near a PNG part boundary. The latest targeted run still auto-passes as `SAMPLE REVIEW`; treat as split-boundary/sidebar polish unless manual review finds a worse artifact.
-- DJI Mini 4 Pro: manual review found a real product-page stitching defect missed by auto guards. The engine now preserves large sticky product media/content panels after the first frame and suppresses repeated floating helper widgets more aggressively. Controlled `product-sticky-zone-page` passes and the latest targeted DJI run auto-passes as `SAMPLE REVIEW`; manual visual confirmation is still useful before closing completely.
-- FastAPI Docs: latest manual review found the right Table of contents/sidebar text clipped near the lower edge. This is an active right-sidebar text clipping / split-boundary defect and should stay in Look-first risk until fixed or explicitly accepted for beta.
-- Cloudflare Blog: manual first-half review found that the bottom block in the look-first artifact has no visible footer/bottom closure. Needs live-page comparison later; possible truncated page end, missing late content, or site-state mismatch.
-- MDN Web API: latest manual review found text/list rows clipped at the bottom of a PNG part boundary near the lower page. Treat as active split-boundary text clipping during multi-part slicing.
-- Next.js Docs: latest manual review confirms the earlier two-vertical-scroll defect still reproduces. The right `On this page` sidebar is copied multiple times, and the left docs sidebar contributes text fragments/stray pieces while the central article text scrolls. If a narrow left scroll container is confidently docs navigation/sidebar and the wider second scroll area is the main content, capture should follow the main content and crop/reuse the sidebar rather than stitching sidebar scroll fragments.
-- MongoDB Docs: manual review found horizontal seam/split bands cutting card sections so some cards show only the large heading while the smaller body text/rectangle content is missing or not fully rendered. Treat as seam-band plus missing-content defect in docs card sections.
-- Laravel Docs: manual review found both the left docs navigation and the right `On this page` sidebar repeated while the central article text continues scrolling. Treat as repeated left/right sidebar chrome in a docs main-content scroll layout, not just unsettled scroll noise.
-- Prisma Docs: manual review found the left sidebar promo card/image `Prisma Next` duplicated in the capture, while the live site shows it only once. Treat as repeated sidebar promo/image in a docs navigation container; root cause still needs investigation.
-- Stripe Docs: manual first-half review found the cookie-acceptance strip repeated in both first and second multi-part screenshots. Expected behavior is first viewport/first part only; treat as current overlay-repeat regression despite older notes that Stripe repeat was improved.
-- Samsung Galaxy S: latest manual review found a horizontal seam/stripe line cutting through product cards. Treat as product-card seam-band / split-boundary defect; the line is not real page content and should not cut cards.
-- Apple iPhone: manual review found two active defects: the `Why Apple is the best` heading/subtitle is clipped at a PNG part boundary, and a lower `iPhone` section captured as mostly blank even though the live site shows navigation columns there. Treat as split-boundary text clipping plus missing-content/incomplete-section risk.
-- Apple MacBook Air: manual review found the `Our values lead the way` carousel/cards section missing the middle `Privacy. That's Apple.` card in the captured output, while the live site shows three cards. Treat as missing-content/carousel-card-drop risk in addition to split-boundary risk.
-- Dyson Vacuums: manual review found the black product navigation/search menu bar repeated multiple times down the screenshot. Treat as repeated sticky-nav / repeated-overlay defect.
+| User problem | Technical problem | Example sites | Priority |
+| --- | --- | --- | --- |
+| Text/cards are cut inside a screenshot. | Split-boundary / seam placement across text, docs cards, product cards, or product-grid rows. | FastAPI, MongoDB, Patagonia, Nordstrom, Samsung, REI, Target, Walmart. | Must |
+| Product cards are cut between PNG parts. | Tiled-output boundary lands inside product card/grid row. | REI, Target, Walmart. | Must |
+| User does not understand capture progress/result. | Capture progress, notification, completion feedback. | Product/UI. | Must |
+| User needs PDF export. | PDF export pipeline, page sizing, output fidelity. | Export. | Must |
+| Popup duplicates in capture. | Repeated popup/modal overlay normalization. | Patagonia. | Nice to have |
+| First viewport is dimmed, but later frames become light/white while a popup is active. | Dimmed backdrop continuity / modal overlay state mismatch. | Samsung. | Nice to have |
+| Footer is missing from the final capture. | Bounded tail growth guard after stale scroll plan / page-height measurement: reread `scrollHeight/maxY` after the last planned frame and capture a limited tail if the page grew. | Patagonia, REI. | Nice to have |
+| White empty zones or rich-media sections do not load. | Image readiness, layout settle, rich-media section readiness. | Sony WH-1000XM5. | Could |
+| App shell / SPA captures as blank. | App-shell loaded-state / readiness guard. | Mermaid Live Editor. | Could |
+| Lazy shift during card cutting. | Page stability before planning and during capture; not split-boundary logic. | Patagonia, Samsung. | Could |
+| Full site is captured even though only the first viewport should be captured. | LEGO/Nike remain backlog because programmatic scroll can move behind a visually blocking overlay; deeper user-scroll / pointer-blocking overlay detection is not current release work. | LEGO, Nike. | Could |
+| Product detail page screen splits apart. | Недостаточность правило скролл-таргет. | DJI Mini 4 Pro. | Could |
 
-## Current Engineering Direction
+## Parked / Deferred
 
-1. Completed code layer:
-   - QA-runner guards for blank/low-entropy, app-shell loaded state, width/right-side sanity, and blocking modal state;
-   - engine policy for `scroll-lock` and `entry-gate-text` popups: capture one visible viewport only;
-   - uncertain large popups continue capture and become review signals instead of automatic stops;
-   - `PageProbe` width clamp for normal window pages;
-   - narrowed sticky suppression so large sticky product media/content panels are not hidden after the first frame, while sticky docs/sidebar/navigation chrome and floating widgets can still be suppressed;
-   - expanded floating helper/widget suppression for small right/left-edge chat/help/support/icon-like controls.
-   - Deep QA detector-only risk tags are active for known manual regressions, including repeated docs sidebars, product filter panels, split-boundary text clipping, missing-content/black-strip risks, and blocking popup mismatch.
-   - `PageProbe` now respects `viewport-only` blocking modal decisions before selecting an internal scroll container, so entry-gate/cookie modals cannot accidentally turn into a long internal-scroll capture.
-   - First-viewport mismatch caused by a dynamic cookie/modal overlay appearing during capture is classified as `UNSTABLE SITE` instead of a hard `FAIL`, while true blocking-modal mismatch remains guarded.
-   - First technical pass after the latest manual review: `FixedStickyNormalizer` now suppresses repeated side chrome/filter/nav panels after the first frame even when the repeated visual container is not a simple `position: sticky` match; `PageProbe` emits split exclusion ranges for card/product/tile/carousel-like blocks; `CanvasSizeGuard` avoids placing multi-part output boundaries inside those ranges when possible.
-2. Completed verification:
-   - static extension validation passed;
-   - controlled `capture-flow` passed;
-   - targeted LEGO/Mermaid/Microsoft smoke completed with 0 `FAIL`;
-   - second-half 100-site run completed with 0 `FAIL`;
-   - first-half 50-site run on the current sticky/widget build completed with 0 `FAIL`: 17 `PASS_AUTO`, 18 `SAMPLE REVIEW`, 11 `UNSTABLE SITE`, 4 `BLOCKED ACCESS`;
-   - current 100-site measurement snapshot has 0 automated `FAIL` across the latest full first-half run plus the latest full second-half run; second-half sites affected by the latest sticky/widget work were also targeted again.
-   - review publishing red-team check completed: `/Users/dima/Desktop/For-Dima-from-Codex` is the active folder, all 18 first-half `SAMPLE REVIEW` cases are copied there, and `validate-extension` now guards against default sample caps and timestamp-folder publishing.
-   - latest full 100-site run on the current build completed with exit code 0: 41 `PASS_AUTO`, 26 `UNSTABLE SITE`, 28 `SAMPLE REVIEW`, 5 `BLOCKED ACCESS`, 0 `FAIL`.
-   - latest review folder `/Users/dima/Desktop/For-Dima-from-Codex` contains the expected buckets: `01-LOOK-FIRST-engine-risk`, `02-Samples`, and `03-BLOCKED-pages`; all 28 `SAMPLE REVIEW` cases are included.
-   - targeted beta gate must include at least 15 high-risk real sites from the dynamic `deepQa.riskTags` set; smaller targeted smoke is allowed during development but does not count as beta sign-off.
-3. Next work:
-   - QA roadmap: Deep QA mode has started in the real-site runner as detector-only checks using `deepQa.riskTags`; it flags repeated overlays/sidebars, seam/band risks, split-boundary text risks, missing-content/black-strip risks, and blocking-popup mismatches as `UNSTABLE SITE` diagnostics without limited retry or baselines;
-   - browser permission is now an explicit process gate: `Браузер нет` means no Chrome/Playwright-backed command at all, including local `capture:risk` fixtures; interrupted browser-backed artifacts must be marked invalid and not used as beta evidence;
-   - offline PNG QA has started as a no-browser report-only layer: `npm run qa:png` analyzes existing `Screenshots-for-Review/runs/latest/` artifacts for repeated sidebars/overlays, seam bands, black strips, and right-side gray/blank areas;
-   - opt-in controlled beta-risk fixtures are available through `npm run capture:risk`; they model two-scroll docs layouts, repeated cookie strips, scrollable dimmed-popup backdrop state, split-boundary text, right gray strips, product-card seam bands, missing middle content, and lazy-loaded footer links without adding them to the default smoke gate;
-   - `lazy-footer-links-page` was added to `capture:risk` for the Allbirds-style case where right-side footer Company/Information links do not load or disappear near the bottom of a long ecommerce capture;
-   - `apple-values-three-card-carousel-page` was added to `capture:risk` for the Apple MacBook Air-style values section where the middle Privacy card disappears while the left and right cards remain;
-   - `apple-iphone-incentive-boundary-page` was added to `capture:risk` for the Apple iPhone-style `Why Apple is the best place to buy iPhone` section where the heading/subcopy can be clipped just before the buying cards;
-   - `apple-iphone-directory-columns-page` was added to `capture:risk` for the Apple iPhone lower directory section where Explore/Shop/More columns should load instead of leaving a mostly blank `iPhone` heading area;
-   - `dimmed-popup-scroll-state-page` was added to `capture:risk` for scrollable popup states where the dialog panel should appear only in frame 0 but the dimmed-page backdrop must remain across later frames; it now models vendor consent roots like OneTrust, removes the original backdrop during scripted scroll, and verifies that the engine synthesizes an equivalent dim layer instead of letting later frames become undimmed;
-   - engine `riskFlags` now materialize as an explicit `capturePolicy` in diagnostics; `visible_nav_overlay` skips pre-frame-0 lazy warmup, preserves the user-visible first frame, then suppresses visible nav overlays after frame 0 so Apple-style global menus do not repeat.
-   - `product-hero-duplication-page` was added to `capture:risk` for the Sony-style duplicated hero/title, clipped product media, missing background section, and lower top-text clipping class;
-   - golden baselines have started for key regression sites in `project/tests/golden-baselines/real-sites.json` (`Cloudflare Blog`, `Dyson Vacuums`, `Next.js Docs`); use them for Look-first/Unstable review or before closing those site-specific manual regressions, not as always-on comparison for every 100-site run;
-   - later add masked golden baselines for only 10-20 key regression sites; do not baseline all 100 sites initially;
-   - review first-half and second-half prioritized artifacts if needed;
-   - keep Sony as an active targeted risk case until product-hero duplication, missing content, and split/seam clipping are fixed or explicitly accepted;
-   - ask for manual visual review of the latest targeted DJI/Cypress artifacts;
-   - keep FastAPI right sidebar text clipping as an active defect; keep Cypress-style right sidebar text clipping as polish/regression-watch unless manual review finds it unacceptable;
-   - consider making blocked/error-page classification stricter for short one-viewport ecommerce pages.
-   - strengthen detectors for Microsoft-style right-side gray output and Cypress-style right sidebar text clipping; the latest run still leaves those as sample/polish review rather than confident engine-risk classification.
+| Case | Status |
+| --- | --- |
+| Stripe cookie strip repeat | Done; keep as regression control. |
+| Dyson/Samsung repeated fixed top nav | Done/parked; keep as regression control. |
+
+## Current Risk Pack
+
+- Must split-boundary: FastAPI, MongoDB, Patagonia, Nordstrom, Samsung, REI, Target, Walmart.
+- Must tiled-output product-card boundaries: REI, Target, Walmart.
+- Regression controls: Stripe, Dyson, LEGO, Nike, Next.js, Laravel, TypeScript Handbook, Prisma.
+- Could product split layout: DJI Mini 4 Pro.
+- Could rich-media/readiness: Sony WH-1000XM5, Apple iPhone, Apple MacBook Air.
+
+## Current Engineering State
+
+- QA runner guards: blank/low-entropy, app-shell loaded state, width/right-side sanity, first-viewport similarity, blocking-modal state, unexpected short page risk, dimmed backdrop continuity, Deep QA detector hints.
+- Blocking modal policy: `scroll-lock` is the hard `viewport-only` path; `entryGate` remains diagnostic unless it coincides with scroll lock.
+- Sticky simplification: blanket `sticky -> relative` after warmup/final measure/plan, restored through `DomMutationStack`; fixed elements still use frame-aware handling.
+- `runtime repeated-chrome diagnostics` exist in `CaptureStepper`/`FixedStickyNormalizer`; detector-only unless an explicit normalizer rule handles the class.
+- Offline PNG QA includes repeated sticky/header/sidebar chrome inside a single tall PNG.
+- Internal scroll target policy is window-first: if `windowScrollableY > max(40px, 5vh)`, use window. Internal target only when window barely scrolls and one large central target passes strict geometry with no close second candidate.
+- Multi-part PNG export records Chrome download lifecycle per part: `downloadId`, filename, timestamps, and `waitStatus`.
+
+## Latest Verification Snapshot
+
+- StrategyDesk status on 2026-05-21: runtime scroll probe is parked in backlog. It correctly avoids a false `viewport-only` on Samsung-like pages, but it does not close LEGO/Nike blocking overlays because programmatic scroll can move the page behind the modal. Focus shifts back to current Must work: split-boundary/card seams, tiled-output card boundaries, capture communication, and PDF export.
+  - Samsung Galaxy S: https://www.samsung.com/us/smartphones/galaxy-s/
+  - LEGO Millennium Falcon: https://www.lego.com/en-us/product/millennium-falcon-75192
+  - Nike Air Force 1: https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111
+  - Dyson Vacuums: https://www.dyson.com/vacuum-cleaners
+- Latest 100-site detector-only run: 0 `FAIL`; 41 `PASS_AUTO`, 26 `UNSTABLE SITE`, 28 `SAMPLE REVIEW`, 5 `BLOCKED ACCESS`.
+- Entry-gate/scroll-lock fix:
+  - Samsung now captures full-page; remaining issue is dimmed backdrop continuity.
+  - Bootstrap Modal proves real scroll-lock still produces `viewport-only`.
+  - MDN/Next.js prove long pages continue full-page when there is no scroll lock.
+- Controlled fixtures for basic long page, visible overlay, shipping popup repeat, dimmed popup scroll state, and fullscreen menu non-lightbox passed after the entry-gate change.
 
 ## Source Of Truth Files
 
-- `README.md`: project structure and runnable extension entry points.
+- `project/docs/capture-risk-policy.md`: runtime engine policies and `riskFlags`.
+- `project/tests/qa-runbook.md`: QA commands, publishing, statuses.
+- `project/tests/real-site-findings.md`: durable real-site conclusions and compressed historical QA log.
+- `project/docs/beta-stability.md`: release gate criteria.
+- `project/docs/beta-notes.md`: known limitations, deferred cases, accepted tradeoffs.
+- `project/tests/test-plan.md`: verification strategy and coverage intent.
+- `project/tests/real-sites.json`: real-site QA target DB. Do not compress.
 - `project/docs/product.md`: product direction and constraints.
-- `project/docs/beta-stability.md`: beta gate and product rules.
-- `project/docs/capture-risk-policy.md`: source of truth for engine `riskFlags`, capture policies, and their separation from QA `deepQa.riskTags`.
-- `project/docs/beta-notes.md`: accepted beta limits and known tradeoffs.
-- `project/tests/test-plan.md`: verification strategy and real-site QA rules.
-- `project/tests/qa-runbook.md`: operational QA commands and artifact-publishing rules.
-- `project/tests/real-site-findings.md`: durable real-site triage conclusions.
-- `project/tests/real-sites.json`: real-site QA target list.
-- `project/specs/`: detailed capability specs.
-- `project/product-tasks/`: product task history.
 
 ## Token Budget Rule
 
-For a fresh chat, read this file plus `project/tests/qa-runbook.md` for QA/run/publishing work. If the task touches capture decision-making, read `project/docs/capture-risk-policy.md` next. Then open only the specific source-of-truth file related to the current task. Avoid loading all specs, all product tasks, and the full `real-site-findings.md` unless the user asks for historical detail.
+For a fresh chat, read this file plus `project/tests/qa-runbook.md` for QA/run/publishing work. If the task touches capture decisions, read `project/docs/capture-risk-policy.md` next. Then open only the file related to the current task. Avoid loading all specs, all product tasks, or the full historical QA log unless the user asks for history.

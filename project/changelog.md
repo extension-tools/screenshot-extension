@@ -75,8 +75,8 @@
 - Added controlled capture-flow fixtures for FastAPI-style sticky TOC repetition, Figma-style late lazy preview grids, and 11ty-style scroll-settle gap regressions.
 - Added real-site QA guards for blank/low-entropy output, app-shell loaded state, right-side blank/gray strips, and blocking-modal capture-state mismatches.
 - Clamped normal window capture width to the visible viewport to avoid over-wide output with blank right-side regions.
-- Added blocking/entry-gate popup handling so capture stops at the first visible viewport when a popup blocks normal user scrolling.
-- Split modal diagnostics into `scroll-lock`, `entry-gate-text`, and `large-dialog-uncertain` so non-blocking popups can continue capture while uncertain cases still go to review.
+- Added blocking popup handling so capture stops at the first visible viewport when a modal/dialog technically blocks normal user scrolling.
+- Split modal diagnostics into `scroll-lock`, `entryGate`, and `large-dialog-uncertain`: `scroll-lock` is the only hard `viewport-only` path, `entryGate` is diagnostic unless it coincides with scroll lock, and uncertain non-blocking popups continue capture for review.
 - Expanded blocked-access detection for external error pages such as `Access Denied`, `Oops! Something went wrong`, and `Thank you for your patience`.
 - Narrowed sticky-element suppression so large sticky product media/content panels are no longer hidden after the first frame while sticky docs/sidebar/navigation chrome can still be suppressed.
 - Added `product-sticky-zone-page` capture-flow coverage for DJI-like product configurator pages where a sticky media panel must remain visible during the product-zone scroll and floating helper widgets must not repeat.

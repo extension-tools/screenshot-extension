@@ -1,6 +1,6 @@
 # Capture Risk Flags And Policies
 
-This file is the source of truth for the engine-level `riskFlags` emitted by the capture pipeline and for the policy each flag activates. It intentionally separates runtime engine decisions from QA-only `deepQa.riskTags`.
+This file is the source of truth for the engine-level `riskFlags` emitted by the capture pipeline and for the policy each flag activates. It intentionally separates runtime engine decisions from QA-only `deepQa.riskTags` and diagnostic-only page observations.
 
 ## Why This Exists
 
@@ -28,68 +28,143 @@ Current flags:
 
 | riskFlag | Trigger | Runtime policy | Primary coverage |
 | --- | --- | --- | --- |
-| `fixed_sticky` | A visible `position: fixed` or `position: sticky` candidate is found in the viewport. | Preserve frame 0 exactly. On frames 1+, normalize repeated chrome through `FixedStickyNormalizer`: convert fixed chrome to absolute, convert sticky chrome to relative, hide only overlays/widgets/side chrome that would repeat. | `visible-overlay-first-frame-page`, `cookie-strip-repeat-page`, `sticky-toc-repeat-page`, `rei-backpacks-product-grid-page`, `product-sticky-zone-page` |
-| `visible_nav_overlay` | A visible nav, mega-menu, drawer, or large top navigation overlay is present at capture start. | Preserve first frame; do not aggressively suppress before frame 0. After frame 0, suppress or transform the overlay/nav chrome so it does not repeat in later stitched frames. | `apple-global-menu-first-frame-page`, `product-hero-duplication-page` |
-| `blocking_modal` | `PageProbe.detectBlockingModal()` returns `captureAction: 'viewport-only'`, currently for high-confidence `scroll-lock` or `entry-gate-text` states. | Capture only the visible viewport. Do not hide the modal and scroll the background as if the user closed it. | LEGO/Nike real-site cases, blocking-popup Deep QA tags |
+| `fixed_sticky` | A visible `position: fixed` or `position: sticky` candidate is found in the viewport. | Fixed chrome remains frame-aware: preserve frame 0, then convert repeated fixed chrome to absolute on frames 1+. Hide only overlays/widgets/side chrome that would repeat. Sticky chrome is handled by the full-page policy below, not by this first-viewport flag alone. | `visible-overlay-first-frame-page`, `cookie-strip-repeat-page`, `sticky-toc-repeat-page`, `rei-backpacks-product-grid-page`, `product-sticky-zone-page` |
+| `blocking_modal` | `PageProbe.detectBlockingModal()` returns `captureAction: 'viewport-only'` for a modal/dialog candidate with technical scroll lock. Entry-gate text is diagnostic only and is not enough by itself. | Capture only the visible viewport. Do not hide the modal and scroll the background as if the user closed it. | Bootstrap Modal scroll-lock proof, LEGO/Nike blocking-popup regression controls |
 | `inaccessible_iframe` | One or more iframes cannot be inspected from the extension context. | Record diagnostics and continue normal capture. Treat as a review risk when the iframe affects visible content; do not attempt deep iframe capture in the beta engine. | `iframe-baseline-page` and real-site diagnostics |
+
+## Diagnostic-Only Overlay Candidates
+
+`visible_overlay_candidate` is an observation, not a runtime capture-policy flag.
+
+`PageProbe` records visible overlay candidates in diagnostics:
+
+```text
+capture.scrollTarget.diagnostics.visibleOverlayCandidateCount
+capture.scrollTarget.diagnostics.visibleOverlayCandidates
+```
+
+The candidate signal helps QA explain open nav, drawer, mega-menu, or large overlay states, but it must not skip lazy warmup, change first-frame policy, or activate special runtime suppression by itself.
+
+Product rule:
+
+- a normal site header is `fixed_sticky` chrome, not an overlay;
+- an open menu, drawer, mega-menu, or dialog can be recorded as `visible_overlay_candidate`;
+- actual capture behavior should still be driven by stronger primitives: `fixed_sticky`, `blocking_modal`, split-boundary ranges, readiness checks, and normalizer geometry.
 
 ## Blocking Modal Policy
 
-`PageProbe.detectBlockingModal()` is the product gate for scroll-locking popups and entry gates.
+`PageProbe.detectBlockingModal()` is the product gate for popups that actually block normal page scrolling.
 
-- `reason: 'entry-gate-text'` -> `captureAction: 'viewport-only'`
 - `reason: 'scroll-lock'` -> `captureAction: 'viewport-only'`
 - `reason: 'large-dialog-uncertain'` -> `captureAction: 'continue'`
 - `reason: 'none'` -> `captureAction: 'continue'`
 
-Product rule: if the user is blocked on the first viewport, the extension must capture the blocked first viewport only. It must not pretend the user closed the popup. If the popup is large but does not clearly block user scroll, the engine continues capture and QA can classify the artifact as review/unstable if it repeats or hides content.
+Product rule: if the page itself prevents normal scrolling while a modal/dialog is visible, the extension must capture the blocked first viewport only. It must not pretend the user closed the popup. Entry-gate wording such as country, continue, cookie, or age-gate text is retained in diagnostics as `hasEntryGate` and `entryGateBlocking`, but it does not force `viewport-only` without a technical scroll-lock source. If the popup is large but does not clearly block user scroll, the engine continues capture and QA can classify the artifact as review/unstable if it repeats or hides content.
 
 `PageProbe` must also skip internal scroll-container selection when `captureAction` is `viewport-only`, so a blocked page cannot become a long background capture through an internal container.
 
+### Runtime Scroll Probe Status
+
+The engine may run a short runtime scroll probe when a large fixed/sticky overlay covers the first viewport, the page is long, and technical scroll lock is not proven. This probe is intentionally mechanical: it checks whether programmatic scroll moves before capture strategy/stitching is chosen.
+
+2026-05-21 browser-backed result: this is not enough to close LEGO/Nike-style user-blocking overlays. Samsung correctly stayed full-page, but LEGO and Nike still continued full-page because programmatic scroll can move behind a visually blocking modal. Deeper user-scroll/pointer-blocking detection is backlog and should not be expanded in the current release slice.
+
+Decision sites:
+
+- Samsung Galaxy S: https://www.samsung.com/us/smartphones/galaxy-s/
+- LEGO Millennium Falcon: https://www.lego.com/en-us/product/millennium-falcon-75192
+- Nike Air Force 1: https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111
+- Dyson Vacuums: https://www.dyson.com/vacuum-cleaners
+
 ## Fixed And Sticky Policy
 
-The current policy is frame-aware:
+The current policy is frame-aware for `fixed` elements and blanket-normalizes reachable `sticky` elements after warmup and final page measurement, before capture starts:
 
 ```text
-frame 0:
-  preserve user-visible state
+measure 1:
+  page geometry and initial capturePolicy
+
+prepare basic:
+  fixed chrome/content -> unchanged
+  stability CSS, scrollbar normalization, transitions, fixed-background quirks
+
+warmup:
+  lazy content preparation unless capturePolicy skips it
+
+measure 2 / plan:
+  final page geometry and capture plan
+
+sticky normalization:
+  sticky chrome/content reachable through normal DOM or open Shadow DOM -> relative
 
 frames 1+:
-  dimmed backdrop state -> preserve
-  fixed header/nav chrome -> absolute
-  sticky header/nav/sidebar chrome -> relative
+  dimmed backdrop state -> deferred/proposed; do not change until diagnostics exist
+  fixed top header/nav chrome -> hide
+  other fixed chrome/content -> absolute unless protected
+  sticky no longer needs classifier decisions because it was already moved into normal flow
   cookie/chat/floating widgets -> hide
   open modal/dialog panels -> hide
   product/media content -> preserve
   footer navigation/content -> preserve
 ```
 
-For `visible_nav_overlay`, the explicit policy is:
+Sticky normalization is now the default full-page policy, not an opt-in flag. Full-page captures convert reachable `position: sticky` elements to normal flow after warmup and final measure/plan; `viewport-only` blocking-modal captures skip sticky normalization. This policy must not depend on `fixed_sticky` being visible in the first viewport, because sticky elements can appear lower on the page or inside open Shadow DOM. `late-sticky-below-first-viewport-page` is the controlled regression fixture for this rule. While this policy is active, frame 0 is no longer pixel-exact for sticky positioning; the product rule becomes content preservation with sticky chrome normalized. Sticky elements that appear only after scrolling to a later frame are outside the current step and should be handled by a future per-frame rescan only if needed.
+
+Fixed top headers are a separate small path inside `FixedStickyNormalizer`: after frame 0, a `position: fixed` element near the top edge, wide enough to be site chrome, and short/compact enough not to be a fullscreen overlay is hidden instead of converted to absolute. The current geometry is intentionally narrow: `rect.top < 22`, `rect.width >= viewportWidth * 0.55`, `rect.height < viewportHeight - rect.top - 22`, and `rect.height <= min(220, viewportHeight * 0.32)`. This preserves the user-visible first frame while preventing repeated top navigation bars in the final PNG. The fallback `fixed-to-absolute` path remains for other fixed elements. Controlled fixtures: `fixed-top-header-page` and `fixed-top-small-button-page`.
+
+Open Apple-style global menus and similar large navigation panels are protected by the same fixed/sticky policy: sticky parts are normalized after warmup/final measure, while fixed parts preserve frame 0 and normalize repeated chrome through geometry on frames 1+. The diagnostic `visible_overlay_candidate` can explain why the page is visually risky, but it does not disable lazy warmup or create a separate runtime mode.
+
+Sticky normalization must also be auditable and reversible. Runtime diagnostics should expose only compact aggregate data: whether sticky normalization applied, how many sticky elements were normalized, how many frames contained normalized sticky nodes, how many open Shadow DOM roots were touched, and the reason bucket. Cleanup diagnostics should report temporary sticky markers and normalization style rules before and after restore. The no-browser smoke `project/tests/sticky-cleanup-smoke.mjs` is the acceptance check that `data-screenshot-extension-sticky-normalized`, injected CSS rules, and inline style overrides are removed or restored after `DomMutationStack.restoreAll()`.
+
+### Runtime Repeated Chrome Diagnostics
+
+`FixedStickyNormalizer` also emits passive per-frame `chromeCandidates` diagnostics for likely repeated page chrome:
 
 ```text
-preserveFirstFrame: true
-skipLazyWarmupBeforeFirstFrame: true
-
-firstFrame:
-  preserveUserState: true
-  normalizeFixedSticky: false
-  suppressVisibleNavOverlay: false
-
-afterFirstFrame:
-  normalizeFixedSticky: true
-  suppressVisibleNavOverlay: true
-  suppressRepeatedOverlays: true
+diagnostics.stepper.frames[].beforeFrame.chromeCandidates
+diagnostics.stepper.repeatedChrome
+diagnostics.repeatedChromeSummary
 ```
 
-This protects Apple-style open global menus and similar large navigation overlays: the first captured viewport matches the user-visible state, but the menu/nav is not duplicated down the stitched output.
+This is a detector layer, not a capture-policy layer. It records signatures for top headers, sidebars, filter panels, cookie strips, and floating widgets, then `CaptureStepper` reports signatures that appear in frame 0 and later frames, or across multiple frames after frame 0. The first implementation must not change DOM behavior or add retries; it exists so QA and real-site reports can explain bugs such as `repeated-sticky-chrome`, `repeated-sidebar`, `repeated-cookie-strip`, and `repeated-floating-widget` before we decide whether a normalizer rule is needed.
 
 Important constraints:
 
-- Do not hide all fixed/sticky nodes before the first frame.
-- Do not use one global rule for Apple-style nav overlays and generic sticky sidebars.
+- Do not hide all fixed/sticky nodes before the first frame. The sticky experiment converts sticky nodes to `relative`; it must not hide them.
+- Do not treat a normal fixed/sticky header as an overlay.
+- Do not use one global overlay rule for Apple-style nav panels, generic headers, and sticky sidebars.
 - Do not suppress large product media blocks just because they are sticky.
-- Do not remove a dimmed backdrop when the user can scroll the page while a popup is open; hide the popup panel after frame 0, but keep the page-darkening state across later frames. If the backdrop lives inside a vendor consent root such as OneTrust, preserve that root container too, otherwise broad cookie suppression can hide the backdrop by hiding its parent. If the site removes the original backdrop during scripted scroll, synthesize an equivalent fixed dim layer for frames 1+ so the stitched output still matches the user-visible open-popup state.
+- Dimmed backdrop continuity is deferred until diagnostics prove the cause. First add measured page height before capture, page height during/after capture, and planned `scrollY` vs actual `scrollY` per frame; if deviation exceeds threshold, mark the capture as `layout_unstable`. Do not change fixed header behavior. Do not change overlay policy in the same diff. Possible later rule: if the page truly scrolls while a popup is open, full-page capture is OK, but the dim backdrop should persist on every frame.
 - Always restore DOM mutations through `DomMutationStack` after capture.
+
+## QuirksLayer
+
+`QuirksLayer` is a small exception layer above the general capture logic. It is not a product mode, not an industry mode, and not a replacement for `PageProbe`, `FixedStickyNormalizer`, or split-boundary planning.
+
+Current hooks:
+
+```text
+quirks.beforeMeasure(page)
+quirks.afterWarmup(page)
+quirks.cleanup(page)
+```
+
+Current quirks:
+
+| quirk | Trigger | Runtime effect | Why it is a quirk |
+| --- | --- | --- | --- |
+| `preserve-fixed-background` | A viewport-fixed or `background-attachment: fixed` design background is visible and looks passive, non-interactive, and non-modal. | `QuirksLayer` marks only the matching elements with `data-screenshot-extension-quirk-fixed-background="preserve-fixed-background"` and sets `capturePolicy.quirks.preserveFixedBackground = true`; `ContentAgent` excludes only marked elements from `background-attachment: scroll`; `FixedStickyNormalizer` preserves only marked elements. | It changes one concrete thing on specific DOM nodes instead of making fixed-background preservation page-wide. |
+| `known-lightbox-root` | The known selector `#lightbox-wrap` is visible, `position: fixed`, `z-index >= 1000`, and covers the viewport within 2px on every edge. | The marked lightbox becomes the capture root with `scrollTarget.composeMode = 'lightbox-root'`; the page underneath is not captured as the root; `FixedStickyNormalizer` must preserve the selected root on frames 1+. | It handles one concrete capture-root mismatch without guessing from broad fullscreen/menu/gallery semantics. |
+
+Quirk rules:
+
+- keep each quirk small and reversible;
+- record applied quirks in diagnostics;
+- clean marker attributes after capture;
+- preserve only marked fixed-background candidates; do not make `preserveFixedBackground` a page-wide normalizer bypass;
+- do not add Apple/ecommerce/docs modes here;
+- do not infer `known-lightbox-root` from `[class*="fullscreen"]`, nav menus, drawers, cookies, sign-in, age gates, or generic modal semantics;
+- do not let quirks rewrite the whole pipeline.
 
 ## Width Policy
 
@@ -108,19 +183,30 @@ This avoids Microsoft-style over-wide/right-side blank output. If a page is trul
 The engine captures the window by default. It selects one internal scroll container only when all of these are true:
 
 - no `viewport-only` blocking modal;
-- window scroll height is less than `viewportHeight * 0.75`;
-- a large central scrollable candidate exists;
+- window scroll height is less than or equal to `max(40px, viewportHeight * 0.05)`;
+- a large central scrollable candidate exists:
+  - `width >= viewportWidth * 0.65`;
+  - `height >= viewportHeight * 0.55`;
+  - `visibleArea >= viewportArea * 0.50`;
 - there is no close second candidate;
-- the candidate is not likely a side panel or sparse editor/canvas workspace.
+- the candidate is not edge-anchored and narrow.
+
+The runtime decision deliberately does not use sidebar/nav/menu descriptor semantics. If a regular page can scroll more than `max(40px, 5vh)`, use window scroll. Internal scroll is reserved for high-confidence app-shell style pages where the browser window barely scrolls and one obvious large scroll container dominates the viewport.
 
 When selected, diagnostics report:
 
 ```text
 scrollTarget.type = 'element'
 scrollTarget.composeMode = 'app-shell'
+scrollTarget.diagnostics.windowScrollHeight
+scrollTarget.diagnostics.windowScrollThreshold
+scrollTarget.diagnostics.selectedScrollCandidate
+scrollTarget.diagnostics.internalScrollCandidates[]
 ```
 
-This policy is for app-shell/editor-style pages. Docs pages with sidebars should usually keep the main article as the content target and avoid repeating/capturing sidebar scroll fragments.
+Scroll candidate diagnostics must stay compact. Keep only the fields needed to explain vertical scroll-container choices: `descriptor`, `rect`, `position`, `scrollHeight`, `clientHeight`, `scrollableY`, `hasFixedAncestor`, and `hasStickyAncestor`. Do not record full selectors or full ancestor chains; those are noisy and too site-specific for the beta decision loop.
+
+This policy is for app-shell/editor-style pages. Docs and product pages with normal window scroll should stay on the window target, even when sidebars, filters, or tables also expose internal scrollbars.
 
 ## Split Boundary Policy
 
@@ -132,6 +218,8 @@ Key reasons:
 - `header-gallery-module`: Apple-style heading plus carousel/card/gallery sections.
 
 This is the policy that protects Apple heading/subtitle sections, Samsung/Patagonia/REI product cards, MDN text rows, and MongoDB card modules from being cut by seams.
+
+Diagnostics expose a compact `splitExclusionSummary`: total protected range count, counts by reason, max protected height, total protected height, and a small range sample. This is the 100-site measurement layer for choosing product-card and docs-card split-boundary fixes without logging DOM selectors or full element metadata.
 
 ## Readiness And Lazy Media Policy
 
@@ -154,6 +242,8 @@ Current beta direction: no automatic limited retry for the user by default. Miss
 - hard failure when output is too wide, too large, or would require too many image parts.
 
 When `tiled-output` is used, tile boundaries must consult `splitExclusionRanges`. The user may receive multiple PNG files, but each part should avoid cutting cards/text/modules when safe boundaries exist.
+
+Multi-part PNG export must observe the Chrome download lifecycle for each part. `CaptureStore` records `downloadId`, filename, `startedAt`, `acceptedAt`, `completedAt`, and `waitStatus`; for tiled output it waits for `chrome.downloads.onChanged` to report `complete` before starting the next part or reporting the export as `saved`. A gray-looking PNG in Finder during export should be treated as an incomplete in-progress download, not as a hidden file, quarantine flag, or capture-output defect. This keeps part ordering and Finder-visible state diagnosable without changing the capture pipeline.
 
 ## QA Risk Tags Are Different
 

@@ -68,6 +68,8 @@ It does not open Chrome. Use it to pre-cluster visual risks such as repeated sid
 
 Before changing capture behavior, read `project/docs/capture-risk-policy.md`. It is the source of truth for actual engine `riskFlags`, frame 0 vs frames 1+ fixed/sticky handling, blocking-modal `viewport-only` behavior, width clamping, internal scroll target selection, split-boundary policy, and the boundary between engine flags and QA-only `deepQa.riskTags`.
 
+`unexpectedShortPageRisk` is QA-only. Use it when a configured real-site case expects a multi-screen page, but the pre-capture DOM is near one viewport and no high-confidence internal scroll target exists. Treat it as an invalid/short render signal to rerun or review, not as a production capture mode.
+
 ## Controlled Risk Fixtures
 
 The standard smoke suite is:
@@ -83,6 +85,13 @@ npm run capture:risk
 ```
 
 `capture:risk` includes additional fixtures for the latest manual regression classes: two-scroll docs layouts, repeated cookie strips, scrollable dimmed-popup backdrop state, split-boundary text, right gray strips, product-card seam bands, missing middle content, Apple-style three-card carousel missing-center cases, Apple iPhone incentive heading/subcopy clipping, Apple iPhone lower directory columns missing, lazy-loaded footer links, and duplicated product hero/media sections. Use it while fixing those classes; do not treat failures there as surprising until the corresponding engine fix is being worked.
+
+Current product Must classes to keep in mind during QA:
+
+- split-boundary / seam placement through text, docs cards, product cards, or product-grid rows;
+- tiled-output boundaries cutting product cards between PNG part 01 and part 02;
+- capture progress / notification / completion feedback;
+- PDF export fidelity built on the same capture output.
 
 ## Publishing Rules
 
@@ -113,9 +122,30 @@ npm run capture:risk
 
 - `PASS_AUTO`: auto checks passed; not copied to the active review folder.
 - `SAMPLE REVIEW`: auto checks passed, but the site is complex enough to warrant human review.
-- `UNSTABLE SITE`: capture completed, but diagnostics found quality risk.
+- `UNSTABLE SITE`: capture completed, but diagnostics found a strong quality risk that Dima should look at first.
 - `BLOCKED LOGIN` / `BLOCKED ACCESS`: the site showed login, bot protection, consent wall, access denied, or equivalent blocked content. This is not an engine failure.
 - `FAIL`: capture engine or QA assertion failed.
+
+## Look-First Classification
+
+Use `01-LOOK-FIRST-engine-risk` for strong signals only:
+
+- runtime `FAIL`;
+- dynamic modal/overlay appearing during capture;
+- blocking popup state mismatch;
+- dimmed backdrop continuity mismatch;
+- blank, missing-content, image-readiness, width, right-side blank/gray, or export/save failures;
+- Deep QA issues that are specific enough to indicate a likely bad screenshot.
+
+Do not send a site to Look First only because a broad risk heuristic fired. These cases should be `SAMPLE REVIEW` unless paired with a stronger failure:
+
+- possible repeated sidebar/nav/filter candidate across output parts;
+- possible repeated left docs/sidebar chrome below the first viewport;
+- split-boundary text risk from tags alone;
+- small unsettled scroll-frame drift;
+- uncertain large modal where capture continued and other guards passed.
+
+This keeps Look First focused on likely product defects. Broad detector hints still appear in the per-site report so they can guide manual review without making stable sites look broken.
 
 ## Guardrails
 

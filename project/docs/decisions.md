@@ -256,9 +256,11 @@ Tradeoff:
 - Capture takes one extra click compared with direct toolbar capture.
 - The popup must stay intentionally small so it does not become a settings or mode surface too early.
 
-## D018: Keep PDF As A Later Layer
+## D018: Make PDF Export A Current Release Must
 
-PDF export is deferred until the PNG capture engine is beta-stable.
+Decision update on 2026-05-20: PDF export is now `Must` for the current release checklist.
+
+This supersedes the older PNG-only beta decision. The technical sequencing still matters: PDF should reuse the PNG/tiled capture pipeline and diagnostics rather than forcing a separate capture engine.
 
 Why:
 
@@ -268,8 +270,8 @@ Why:
 
 Tradeoff:
 
-- The beta remains PNG-only.
-- Future PDF work should build on captured tiles/bitmaps and preserve diagnostics.
+- PDF is no longer parked as a later optional layer.
+- PDF work should build on captured tiles/bitmaps and preserve diagnostics.
 
 ## D019: Keep Deep Iframe Scrolling Out Of Beta
 

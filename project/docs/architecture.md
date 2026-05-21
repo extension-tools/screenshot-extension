@@ -39,6 +39,7 @@ The capture layer lives in `code/capture/`:
 - `SingleFileExportAttempt.js`: records whether one-file export is safe or the result should stay as parts.
 - `PageProbe.js`: target selection, page/container dimensions, viewport, DPR, scroll state, and lightweight diagnostics.
 - `PositionPlanner.js`: scroll-position plan.
+- `QuirksLayer.js`: small, isolated, diagnostic hooks for narrow capture exceptions such as fixed design backgrounds and known lightbox capture roots.
 - `LazyLoadWarmer.js`: bounded pre-capture scroll warmup for lazy/scroll-triggered content.
 - `CaptureStepper.js`: scroll and frame capture loop.
 - `ViewportCapture.js`: `chrome.tabs.captureVisibleTab` wrapper.
@@ -86,22 +87,23 @@ The test layer lives in `project/tests/`:
 2. Chrome opens the extension popup.
 3. User clicks `Capture entire page`.
 4. Popup sends a runtime message to the service worker.
-5. Service worker measures the active tab and chooses `window` or one high-confidence internal scroll target.
-6. Capture layer chooses single-canvas, tiled-output, or controlled-failure strategy.
-7. If the selected strategy requires tiled output, `NotificationService` emits a large-page split notice before real frame capture.
-8. Service worker injects and prepares the content agent.
-9. Service worker warms lazy/scroll-triggered content within the measured page bounds.
-10. Service worker remeasures the page or internal scroll target after warmup and rebuilds the capture plan if scrollable size changed.
-11. Service worker scrolls through the selected target.
-12. Content agent normalizes frame-specific DOM/CSS state.
-13. Content agent waits briefly for current viewport layout stabilization.
-14. Each visible viewport is captured.
-15. Frames are stitched into one canvas or tiled output canvases using `devicePixelRatio`; internal targets are cropped from the viewport bitmap.
-16. `SingleFileExportAttempt` records whether one-file export is safe. For current PNG output, unsafe tiled captures stay as multiple PNG parts.
-17. `CaptureDiagnostics` records CSS page size, bitmap size, DPR, strategy, scroll target, image readiness summary, and export intent.
-18. Content mutations and original target/window scroll positions are restored.
-19. Final image or image parts are downloaded.
-20. `CaptureDiagnostics` records export/download status or failure reason.
+5. `QuirksLayer` runs cheap before-measure hooks for narrow exceptions and records what it applied.
+6. Service worker measures the active tab and chooses `window`, one high-confidence internal scroll target, or a known lightbox capture root.
+7. Capture layer chooses single-canvas, tiled-output, or controlled-failure strategy.
+8. If the selected strategy requires tiled output, `NotificationService` emits a large-page split notice before real frame capture.
+9. Service worker injects and prepares the content agent.
+10. Service worker warms lazy/scroll-triggered content within the measured page bounds.
+11. `QuirksLayer` runs after-warmup hooks, then service worker remeasures the page or selected target and rebuilds the capture plan if scrollable size changed.
+12. Service worker scrolls through the selected target.
+13. Content agent normalizes frame-specific DOM/CSS state.
+14. Content agent waits briefly for current viewport layout stabilization.
+15. Each visible viewport is captured.
+16. Frames are stitched into one canvas or tiled output canvases using `devicePixelRatio`; internal targets are cropped from the viewport bitmap.
+17. `SingleFileExportAttempt` records whether one-file export is safe. For current PNG output, unsafe tiled captures stay as multiple PNG parts.
+18. `CaptureDiagnostics` records CSS page size, bitmap size, DPR, strategy, scroll target, image readiness summary, quirks, and export intent.
+19. Content mutations, quirk markers, and original target/window scroll positions are restored.
+20. Final image or image parts are downloaded.
+21. `CaptureDiagnostics` records export/download status or failure reason.
 
 ## Architecture Boundaries
 

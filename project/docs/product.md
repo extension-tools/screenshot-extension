@@ -6,6 +6,37 @@ Screenshot Extension is a Chrome-only browser extension for capturing full-page 
 
 The product starts with one reliable workflow: capture the entire current page and save the result as an image. Over time, it should become a dependable screenshot tool for long pages, high-DPI displays, sticky layouts, lazy-loaded content, custom scroll areas, iframes, and very large pages.
 
+## Product Priorities
+
+- Keep the capture engine simple, mechanical, and understandable. Simple and medium pages should screenshot quickly; difficult pages should prioritize readable, stable output without adding combinatorial rules, site modes, or broad special-case systems.
+- Reduce product-owner cognitive load: keep current priorities short, obvious, and decision-ready. Prefer one current table over scattered historical notes.
+
+## Current Release Priorities
+
+| User problem | Product priority |
+| --- | --- |
+| Text/cards are cut inside screenshots. | Must |
+| Product cards are cut between PNG parts. | Must |
+| User does not understand what is happening during capture. | Must |
+| PDF export is needed. | Must |
+| Popup duplicates in capture. | Nice to have |
+| Only the first screen scrolls, not the whole page. | Nice to have |
+
+Done/parked below the line: DJI product-detail split layout, Stripe cookie strip repeat, gray-looking PNG during download, and repeated black/top navigation.
+
+Backlog below the line: blocking-popup capture continuing behind LEGO/Nike-style popups. The 2026-05-21 runtime scroll probe reduced false `viewport-only` risk for Samsung-like pages, but it did not close visually blocking overlays when programmatic scroll still moves the page behind the modal.
+
+## StrategyDesk Status: Blocking Overlay Scroll Probe
+
+Decision on 2026-05-21: park the deeper blocking-overlay/user-scroll detection work in backlog and return focus to current Must priorities. The current mechanical probe is useful as a diagnostic and false-positive reducer, but it is not enough to decide that a user-visible modal truly blocks the page.
+
+Sites used for the decision:
+
+- Samsung Galaxy S: https://www.samsung.com/us/smartphones/galaxy-s/
+- LEGO Millennium Falcon: https://www.lego.com/en-us/product/millennium-falcon-75192
+- Nike Air Force 1: https://www.nike.com/t/air-force-1-07-mens-shoes-5QFp5Z/CW2288-111
+- Dyson Vacuums: https://www.dyson.com/vacuum-cleaners
+
 ## Target Users
 
 - People who need to archive full web pages.

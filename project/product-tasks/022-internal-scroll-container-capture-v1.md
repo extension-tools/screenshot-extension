@@ -22,6 +22,13 @@ The beta should capture the main content pane on high-confidence app-shell pages
 - Stitch the container content into the final PNG.
 - Restore the container scroll and window scroll after capture.
 
+## Research Guardrails
+
+- Detect when a supposed full-page/site capture would only produce the first visible viewport.
+- Treat first-viewport-only output as a risk or failure when the page or selected target has measurable content below the fold.
+- Measure this with planned capture height versus viewport height during probe runs, and with final PNG height versus viewport height during real capture runs.
+- Record the reason when the policy intentionally preserves only the current viewport state because no high-confidence scroll target exists.
+
 ## Non-Goals
 
 - No multiple-container capture.
@@ -34,6 +41,7 @@ The beta should capture the main content pane on high-confidence app-shell pages
 
 - `internal-scroll-container-page` passes in `capture:test`.
 - The output PNG includes the bottom marker inside the internal scroll container.
+- Research/probe output flags cases where the policy would capture only the first viewport while the site has measurable below-fold content.
 - Normal window capture cases continue to pass.
 - Static validation still passes.
 
