@@ -19,6 +19,7 @@ project/tests/real-site-qa-*.md
 project/tests/broad-*.md
 project/tests/wide-card-*.md
 project/tests/targeted-*.md
+project/tests/wide-card-headless-research.mjs
 
 # Rendered documentation exports are generated review artifacts.
 # Keep the Markdown source of truth in Git instead.
