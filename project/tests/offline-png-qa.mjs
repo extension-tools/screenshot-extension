@@ -213,6 +213,153 @@ const detectHorizontalBand = png => {
     .filter(band => band.height >= 18 && band.height <= 140);
 };
 
+const hasAnyTag = (tags, values) => values.some(value => tags.has(value));
+
+const regionFromPixels = (png, {left = 0, right = png.width, top = 0, bottom = png.height}) => ({
+  leftRatio: clamp(left / Math.max(1, png.width), 0, 1),
+  rightRatio: clamp(right / Math.max(1, png.width), 0, 1),
+  topRatio: clamp(top / Math.max(1, png.height), 0, 1),
+  bottomRatio: clamp(bottom / Math.max(1, png.height), 0, 1)
+});
+
+const detectRepeatedHorizontalChromeInImage = png => {
+  if (png.height < 1400 || png.width < 500) {
+    return [];
+  }
+
+  const stripHeight = clamp(Math.round(png.width * 0.05), 42, 96);
+  const sourceLimit = Math.min(Math.round(png.height * 0.28), 900);
+  const sourceStep = Math.max(24, Math.round(stripHeight / 2));
+  const targetStep = Math.max(64, Math.round(stripHeight * 0.9));
+  const repeated = [];
+
+  for (let sourceY = 0; sourceY < sourceLimit - stripHeight; sourceY += sourceStep) {
+    const sourceRegion = regionFromPixels(png, {
+      left: png.width * 0.03,
+      right: png.width * 0.97,
+      top: sourceY,
+      bottom: sourceY + stripHeight
+    });
+    const sourceStats = sampleRegion(png, sourceRegion, 40, 6);
+    const chromeLikeSource = sourceStats.darkRatio > 0.48 ||
+      (sourceStats.mean < 95 && sourceStats.stddev < 42 && sourceStats.buckets <= 22);
+    if (!chromeLikeSource) {
+      continue;
+    }
+
+    const sourceSignature = regionSignature(png, sourceRegion, 16, 4);
+    const matches = [];
+    const firstTargetY = sourceY + Math.max(420, stripHeight * 5);
+    for (let targetY = firstTargetY; targetY < png.height - stripHeight; targetY += targetStep) {
+      const targetRegion = regionFromPixels(png, {
+        left: png.width * 0.03,
+        right: png.width * 0.97,
+        top: targetY,
+        bottom: targetY + stripHeight
+      });
+      const targetStats = sampleRegion(png, targetRegion, 40, 6);
+      const chromeLikeTarget = targetStats.darkRatio > 0.48 ||
+        (targetStats.mean < 95 && targetStats.stddev < 42 && targetStats.buckets <= 22);
+      if (!chromeLikeTarget) {
+        continue;
+      }
+
+      const distance = signatureDistance(sourceSignature, regionSignature(png, targetRegion, 16, 4));
+      if (distance < 9) {
+        matches.push({
+          y: targetY,
+          distance: Math.round(distance * 10) / 10
+        });
+      }
+    }
+
+    if (matches.length) {
+      repeated.push({
+        sourceY,
+        stripHeight,
+        matches: matches.slice(0, 6),
+        stats: sourceStats
+      });
+    }
+  }
+
+  return repeated.slice(0, 4);
+};
+
+const detectRepeatedSideChromeInImage = png => {
+  if (png.height < 1600 || png.width < 700) {
+    return [];
+  }
+
+  const chunkHeight = clamp(Math.round(png.width * 0.7), 520, 980);
+  const sourceTop = Math.min(Math.round(png.height * 0.08), 180);
+  const sides = [
+    {
+      side: 'left',
+      left: 0,
+      right: Math.round(png.width * 0.26)
+    },
+    {
+      side: 'right',
+      left: Math.round(png.width * 0.74),
+      right: png.width
+    }
+  ];
+  const repeated = [];
+
+  for (const side of sides) {
+    const sourceRegion = regionFromPixels(png, {
+      left: side.left,
+      right: side.right,
+      top: sourceTop,
+      bottom: Math.min(png.height, sourceTop + chunkHeight)
+    });
+    const sourceStats = sampleRegion(png, sourceRegion, 16, 32);
+    if (sourceStats.blankLike || sourceStats.buckets < 7) {
+      continue;
+    }
+
+    const sourceSignature = regionSignature(png, sourceRegion, 8, 18);
+    const matches = [];
+    for (
+      let targetTop = sourceTop + Math.max(chunkHeight, 700);
+      targetTop < png.height - Math.min(320, chunkHeight * 0.5);
+      targetTop += Math.max(300, Math.round(chunkHeight * 0.55))
+    ) {
+      const targetRegion = regionFromPixels(png, {
+        left: side.left,
+        right: side.right,
+        top: targetTop,
+        bottom: Math.min(png.height, targetTop + chunkHeight)
+      });
+      const targetStats = sampleRegion(png, targetRegion, 16, 32);
+      if (targetStats.blankLike || targetStats.buckets < 7) {
+        continue;
+      }
+
+      const distance = signatureDistance(sourceSignature, regionSignature(png, targetRegion, 8, 18));
+      if (distance < 11) {
+        matches.push({
+          y: targetTop,
+          distance: Math.round(distance * 10) / 10
+        });
+      }
+    }
+
+    if (matches.length) {
+      repeated.push({
+        side: side.side,
+        sourceY: sourceTop,
+        chunkHeight,
+        matches: matches.slice(0, 6),
+        stats: sourceStats
+      });
+    }
+  }
+
+  return repeated;
+};
+
 const analyzeDecodedPng = ({png, filename, riskTags}) => {
   const issues = [];
   const tags = new Set(riskTags || []);
@@ -271,6 +418,28 @@ const analyzeDecodedPng = ({png, filename, riskTags}) => {
     issues.push({
       type: 'vertical-black-strip',
       detail: `edge strip is mostly black (left ${formatStats(left)}, right ${formatStats(right)})`
+    });
+  }
+
+  const repeatedHorizontalChrome = (
+    discoveryMode ||
+    hasAnyTag(tags, ['repeated-overlay', 'product-sticky', 'product-sticky-anti-regression', 'black-strip'])
+  ) ? detectRepeatedHorizontalChromeInImage(png) : [];
+  if (repeatedHorizontalChrome.length) {
+    issues.push({
+      type: 'repeated-horizontal-chrome-in-image',
+      detail: `${repeatedHorizontalChrome.length} repeated horizontal chrome candidate(s); first source y=${repeatedHorizontalChrome[0].sourceY}, matches=${repeatedHorizontalChrome[0].matches.map(match => match.y).join(', ')}`
+    });
+  }
+
+  const repeatedSideChrome = (
+    discoveryMode ||
+    hasAnyTag(tags, ['repeated-sidebar', 'docs-sidebar-main-scroll', 'product-filter-panel'])
+  ) ? detectRepeatedSideChromeInImage(png) : [];
+  for (const candidate of repeatedSideChrome) {
+    issues.push({
+      type: `repeated-${candidate.side}-chrome-in-image`,
+      detail: `${candidate.side} chrome region repeats from y=${candidate.sourceY}; matches=${candidate.matches.map(match => `${match.y} (d=${match.distance})`).join(', ')}`
     });
   }
 
