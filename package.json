@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node project/tests/validate-extension.mjs",
+    "check": "node project/tests/validate-extension.mjs && node project/tests/sticky-cleanup-smoke.mjs",
     "visual:baseline": "node project/tests/visual-regression.mjs --update-baseline",
     "visual:test": "node project/tests/visual-regression.mjs",
     "capture:test": "node project/tests/capture-flow.mjs",

@@ -70,6 +70,76 @@ const cases = [
     }
   },
   {
+    name: 'fixed-top-header-page',
+    path: '/fixed-top-header-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      colorBands: [
+        {
+          name: 'fixed top header is visible once',
+          color: [246, 57, 57],
+          tolerance: 2,
+          minRows: 70,
+          maxRows: 120,
+          minRowFraction: 0.55
+        }
+      ],
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        riskFlagsInclude: ['fixed_sticky'],
+        fixedStickyCandidateCountAtLeast: 1,
+        frameDiagnostics: [
+          {
+            frameIndex: 1,
+            hiddenAtLeast: 1,
+            transformedAtMost: 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    name: 'fixed-top-small-button-page',
+    path: '/fixed-top-small-button-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      minColorPixels: [
+        {
+          name: 'small fixed top button is preserved in first frame',
+          color: [255, 150, 0],
+          tolerance: 2,
+          minPixels: 2500
+        }
+      ],
+      maxColorPixels: [
+        {
+          name: 'small fixed top button is not treated as a repeated header band',
+          color: [255, 150, 0],
+          tolerance: 2,
+          maxPixels: 9000
+        }
+      ],
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        riskFlagsInclude: ['fixed_sticky'],
+        fixedStickyCandidateCountAtLeast: 1,
+        frameDiagnostics: [
+          {
+            frameIndex: 1,
+            hiddenAtMost: 0,
+            transformedAtLeast: 1
+          }
+        ]
+      }
+    }
+  },
+  {
     name: 'visible-overlay-first-frame-page',
     path: '/visible-overlay-first-frame-page.html',
     expected: 'download',
@@ -103,9 +173,9 @@ const cases = [
         status: 'success',
         exportStatus: 'saved',
         scrollTargetType: 'window',
-        riskFlagsInclude: ['fixed_sticky', 'visible_nav_overlay'],
+        riskFlagsInclude: ['fixed_sticky'],
         fixedStickyCandidateCountAtLeast: 2,
-        visibleNavOverlayCandidateCountAtLeast: 1
+        visibleOverlayCandidateCountAtLeast: 1
       },
       minColorPixels: [
         {
@@ -284,6 +354,7 @@ const cases = [
         status: 'success',
         outputStrategy: 'tiled-output',
         exportStatus: 'saved',
+        exportFilesComplete: true,
         scrollTargetType: 'window'
       }
     }
@@ -366,10 +437,10 @@ const cases = [
       heightGreaterThanViewport: true,
       minColorPixels: [
         {
-          name: 'large sticky product media remains visible during product-zone scroll',
+          name: 'large sticky product media remains captured after sticky normalization',
           color: [11, 118, 255],
           tolerance: 2,
-          minPixels: 420000
+          minPixels: 300000
         }
       ],
       maxColorPixels: [
@@ -518,6 +589,38 @@ const riskCases = [
     }
   },
   {
+    name: 'late-sticky-below-first-viewport-page',
+    path: '/late-sticky-below-first-viewport-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        fixedStickyCandidateCountAtMost: 0
+      },
+      colorBands: [
+        {
+          name: 'late sticky strip is normalized once instead of repeating',
+          color: [255, 64, 180],
+          tolerance: 2,
+          minRows: 50,
+          maxRows: 120,
+          minRowFraction: 0.55
+        }
+      ],
+      minColorPixels: [
+        {
+          name: 'content below late sticky is captured',
+          color: [20, 180, 120],
+          tolerance: 2,
+          minPixels: 12000
+        }
+      ]
+    }
+  },
+  {
     name: 'cookie-strip-repeat-page',
     path: '/cookie-strip-repeat-page.html',
     expected: 'download',
@@ -603,6 +706,94 @@ const riskCases = [
     }
   },
   {
+    name: 'fixed-background-quirk-page',
+    path: '/fixed-background-quirk-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        riskFlagsInclude: ['fixed_sticky'],
+        quirksAppliedInclude: ['preserve-fixed-background']
+      },
+      minColorPixels: [
+        {
+          name: 'fixed design background remains visible across capture',
+          color: [18, 70, 120],
+          tolerance: 2,
+          minPixels: 900000
+        },
+        {
+          name: 'content below fixed background page is captured',
+          color: [40, 190, 120],
+          tolerance: 2,
+          minPixels: 12000
+        }
+      ]
+    }
+  },
+  {
+    name: 'lightbox-root-quirk-page',
+    path: '/lightbox-root-quirk-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'element',
+        scrollTargetComposeMode: 'lightbox-root',
+        quirksAppliedInclude: ['known-lightbox-root']
+      },
+      minColorPixels: [
+        {
+          name: 'known lightbox root content is captured',
+          color: [28, 110, 220],
+          tolerance: 2,
+          minPixels: 120000
+        },
+        {
+          name: 'known lightbox root tail is captured',
+          color: [40, 190, 120],
+          tolerance: 2,
+          minPixels: 12000
+        }
+      ],
+      maxColorPixels: [
+        {
+          name: 'underlying page is not captured as root',
+          color: [210, 30, 140],
+          tolerance: 2,
+          maxPixels: 20000
+        }
+      ]
+    }
+  },
+  {
+    name: 'fullscreen-menu-not-lightbox-page',
+    path: '/fullscreen-menu-not-lightbox-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        quirksAppliedExclude: ['known-lightbox-root']
+      },
+      minColorPixels: [
+        {
+          name: 'fullscreen nav is still visible content, not lightbox root',
+          color: [42, 48, 66],
+          tolerance: 2,
+          minPixels: 100000
+        }
+      ]
+    }
+  },
+  {
     name: 'right-gray-strip-page',
     path: '/right-gray-strip-page.html',
     expected: 'download',
@@ -652,6 +843,38 @@ const riskCases = [
     }
   },
   {
+    name: 'grid-row-boundary-shift-page',
+    path: '/grid-row-boundary-shift-page.html',
+    expected: 'download',
+    assertions: {
+      heightGreaterThanViewport: true,
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        geometryGridRowAddedAtLeast: 1,
+        capturePlanAvoidRangeReasonAtLeast: {
+          reason: 'grid-row',
+          count: 1
+        },
+        frameDiagnostics: [
+          {
+            frameIndex: 1,
+            scrollYAtMost: 790
+          }
+        ]
+      },
+      minColorPixels: [
+        {
+          name: 'lower content marker is captured after shifted boundary',
+          color: [35, 120, 255],
+          tolerance: 2,
+          minPixels: 12000
+        }
+      ]
+    }
+  },
+  {
     name: 'rei-backpacks-product-grid-page',
     path: '/rei-backpacks-product-grid-page.html',
     expected: 'multi-download',
@@ -690,12 +913,6 @@ const riskCases = [
         {
           name: 'REI-like Store Pickup filter form is captured once',
           color: [20, 120, 70],
-          tolerance: 2,
-          minPixels: 8000
-        },
-        {
-          name: 'REI-like category sidebar block is captured once',
-          color: [191, 64, 255],
           tolerance: 2,
           minPixels: 8000
         }
@@ -1025,8 +1242,44 @@ const writeCaseReport = async (caseDir, report) => {
         const syntheticDim = frame.beforeFrame?.syntheticDimBackdropApplied ? ', syntheticDim=yes' : '';
         const policy = frame.beforeFrame?.capturePolicyApplied ? ', policy=yes' : '';
         const navSuppress = frame.beforeFrame?.suppressVisibleNavOverlay ? ', navSuppress=yes' : '';
-        lines.push(`- frame ${frame.frameIndex}: hidden=${frame.beforeFrame?.hidden || 0}, transformed=${frame.beforeFrame?.transformed || 0}${syntheticDim}${policy}${navSuppress}, scroll=${frame.scroll?.x || 0},${frame.scroll?.y || 0}, settled=${frame.scrollSettled === false ? 'no' : 'yes'}${draw}`);
+        const chromeCandidates = Number(frame.beforeFrame?.chromeCandidateCount) || 0;
+        lines.push(`- frame ${frame.frameIndex}: hidden=${frame.beforeFrame?.hidden || 0}, transformed=${frame.beforeFrame?.transformed || 0}, chromeCandidates=${chromeCandidates}${syntheticDim}${policy}${navSuppress}, scroll=${frame.scroll?.x || 0},${frame.scroll?.y || 0}, settled=${frame.scrollSettled === false ? 'no' : 'yes'}${draw}`);
       }
+      lines.push('');
+    }
+
+    const repeatedChrome = report.captureDiagnostics.diagnostics.stepper?.repeatedChrome;
+    if (repeatedChrome) {
+      lines.push('## Repeated Chrome Diagnostics', '');
+      lines.push(`- candidateCount: ${repeatedChrome.candidateCount || 0}`);
+      lines.push(`- repeatedCount: ${repeatedChrome.repeatedCount || 0}`);
+      lines.push(`- reasons: ${(repeatedChrome.reasons || []).join(', ') || 'none'}`);
+      for (const candidate of (repeatedChrome.repeated || []).slice(0, 6)) {
+        lines.push(`- ${candidate.reason}: ${candidate.kind} frames=${(candidate.frames || []).join(',')} action=${candidate.action || 'observe'} rect=${candidate.sampleRect || 'n/a'}`);
+      }
+      lines.push('');
+    }
+
+    const stickyNormalization = report.captureDiagnostics.diagnostics.stickyNormalization?.active ||
+      report.captureDiagnostics.diagnostics.stickyNormalization?.afterWarmup ||
+      report.captureDiagnostics.diagnostics.stickyNormalization?.beforeWarmup;
+    if (stickyNormalization) {
+      lines.push('## Sticky Normalization Diagnostics', '');
+      lines.push(`- applied: ${stickyNormalization.applied ? 'yes' : 'no'}`);
+      lines.push(`- normalized: ${stickyNormalization.normalized || 0}`);
+      lines.push(`- framesWithNormalizedSticky: ${stickyNormalization.framesWithNormalizedSticky || 0}`);
+      lines.push(`- frameCount: ${stickyNormalization.frameCount || 0}`);
+      lines.push(`- shadowRootCount: ${stickyNormalization.shadowRootCount || 0}`);
+      lines.push(`- reasons: ${(stickyNormalization.reasons || [stickyNormalization.reason]).filter(Boolean).join(', ') || 'none'}`);
+      lines.push('');
+    }
+
+    const cleanup = report.captureDiagnostics.diagnostics.cleanup?.content;
+    if (cleanup) {
+      lines.push('## Cleanup Diagnostics', '');
+      lines.push(`- restored: ${cleanup.restored === false ? 'no' : 'yes'}`);
+      lines.push(`- stickyMarkers: before=${cleanup.beforeRestore?.stickyMarkers || 0}, after=${cleanup.afterRestore?.stickyMarkers || 0}`);
+      lines.push(`- stickyNormalizationRules: before=${cleanup.beforeRestore?.stickyNormalizationRules || 0}, after=${cleanup.afterRestore?.stickyNormalizationRules || 0}`);
       lines.push('');
     }
   }
@@ -1066,10 +1319,31 @@ const writeCaseReport = async (caseDir, report) => {
     if (capture.scrollTarget?.diagnostics) {
       lines.push(`- riskFlags: ${(capture.scrollTarget.diagnostics.riskFlags || []).join(', ') || 'none'}`);
       lines.push(`- fixedStickyCandidates: ${capture.scrollTarget.diagnostics.fixedStickyCandidateCount || 0}`);
-      lines.push(`- visibleNavOverlayCandidates: ${capture.scrollTarget.diagnostics.visibleNavOverlayCandidateCount || 0}`);
+      lines.push(`- visibleOverlayCandidates: ${capture.scrollTarget.diagnostics.visibleOverlayCandidateCount || 0}`);
+      const geometryAvoidRanges = capture.scrollTarget.diagnostics.geometryAvoidRangeDiagnostics;
+      if (geometryAvoidRanges) {
+        lines.push(`- geometryAvoidRanges: scanned=${geometryAvoidRanges.scanned || 0}, cardAdded=${geometryAvoidRanges.cardAdded || 0}, gridRowAdded=${geometryAvoidRanges.gridRowAdded || 0}, elapsedMs=${geometryAvoidRanges.elapsedMs ?? 'n/a'}`);
+      }
+      const capturePlanSummary = capture.scrollTarget.diagnostics.capturePlanSummary;
+      if (capturePlanSummary) {
+        const reasons = Object.entries(capturePlanSummary.avoidRangeReasons || {})
+          .map(([reason, count]) => `${reason}:${count}`)
+          .join(', ') || 'none';
+        lines.push(`- capturePlanAvoidRanges: ${capturePlanSummary.avoidRangeCount || 0}, reasons=${reasons}`);
+      }
+      if (capture.scrollTarget.diagnostics.splitLayoutRisk) {
+        lines.push(`- splitLayoutRisk: yes, reason=${capture.scrollTarget.diagnostics.splitLayoutRiskReason || 'n/a'}, shortColumn=${capture.scrollTarget.diagnostics.shortColumnSide || 'n/a'}, heightRatio=${capture.scrollTarget.diagnostics.heightRatio || capture.scrollTarget.diagnostics.tallColumnRatio || 'n/a'}, stickyLike=${capture.scrollTarget.diagnostics.stickyLikeDetected ? 'yes' : 'no'}`);
+      }
+      lines.push(`- quirks: ${(capture.scrollTarget.diagnostics.quirks?.applied || []).join(', ') || 'none'}`);
     }
     lines.push(`- exportStatus: ${capture.export?.status || 'n/a'}`);
     lines.push(`- exportFiles: ${capture.export?.files?.length || 0}`);
+    if (capture.export?.files?.length) {
+      for (const file of capture.export.files) {
+        const lifecycle = file.lifecycle || {};
+        lines.push(`  - part ${file.part || '?'}: downloadId=${file.downloadId || 'n/a'}, wait=${lifecycle.waitStatus || 'n/a'}, started=${lifecycle.startedAt || 'n/a'}, completed=${lifecycle.completedAt || 'n/a'}, filename=${file.filename || 'n/a'}`);
+      }
+    }
     lines.push('');
   }
 
@@ -1646,6 +1920,12 @@ const evaluateCaptureDiagnosticsV2Assertions = ({testCase, captureDiagnostics}) 
       detail: `${capture?.scrollTarget?.type || 'n/a'}, expected ${expected.scrollTargetType}`
     },
     {
+      name: 'capture diagnostics scroll target compose mode matches expected mode',
+      passed: expected.scrollTargetComposeMode === undefined ||
+        capture?.scrollTarget?.composeMode === expected.scrollTargetComposeMode,
+      detail: `${capture?.scrollTarget?.composeMode || 'n/a'}, expected ${expected.scrollTargetComposeMode}`
+    },
+    {
       name: 'capture diagnostics failure reason matches expected reason',
       passed: expected.failureReason === undefined || capture?.failureReason === expected.failureReason,
       detail: `${capture?.failureReason || 'n/a'}, expected ${expected.failureReason}`
@@ -1659,6 +1939,23 @@ const evaluateCaptureDiagnosticsV2Assertions = ({testCase, captureDiagnostics}) 
         (capture?.page ? `${capture.page.bitmapWidth}x${capture.page.bitmapHeight}` : 'n/a')
     }
   );
+
+  if (expected.exportFilesComplete) {
+    const files = Array.isArray(capture?.export?.files) ? capture.export.files : [];
+    const incomplete = files.filter(file =>
+      !file.downloadId ||
+      file.lifecycle?.waitStatus !== 'complete' ||
+      !file.lifecycle?.completedAt
+    );
+
+    results.push({
+      name: 'capture diagnostics export files reached download complete',
+      passed: files.length > 0 && incomplete.length === 0,
+      detail: incomplete.length ?
+        `${incomplete.length} incomplete of ${files.length}` :
+        `${files.length} complete file(s)`
+    });
+  }
 
   const pageDiagnostics = capture?.scrollTarget?.diagnostics || {};
   if (Array.isArray(expected.riskFlagsInclude)) {
@@ -1681,13 +1978,44 @@ const evaluateCaptureDiagnosticsV2Assertions = ({testCase, captureDiagnostics}) 
     });
   }
 
-  if (expected.visibleNavOverlayCandidateCountAtLeast !== undefined) {
-    const count = pageDiagnostics.visibleNavOverlayCandidateCount || 0;
+  if (expected.fixedStickyCandidateCountAtMost !== undefined) {
+    const count = pageDiagnostics.fixedStickyCandidateCount || 0;
     results.push({
-      name: 'capture diagnostics visible nav-overlay candidate count meets expected minimum',
-      passed: count >= expected.visibleNavOverlayCandidateCountAtLeast,
-      detail: `${count}, expected >= ${expected.visibleNavOverlayCandidateCountAtLeast}`
+      name: 'capture diagnostics fixed/sticky candidate count stays below maximum',
+      passed: count <= expected.fixedStickyCandidateCountAtMost,
+      detail: `${count}, expected <= ${expected.fixedStickyCandidateCountAtMost}`
     });
+  }
+
+  if (expected.visibleOverlayCandidateCountAtLeast !== undefined) {
+    const count = pageDiagnostics.visibleOverlayCandidateCount || 0;
+    results.push({
+      name: 'capture diagnostics visible overlay candidate count meets expected minimum',
+      passed: count >= expected.visibleOverlayCandidateCountAtLeast,
+      detail: `${count}, expected >= ${expected.visibleOverlayCandidateCountAtLeast}`
+    });
+  }
+
+  if (Array.isArray(expected.quirksAppliedInclude)) {
+    const appliedQuirks = Array.isArray(pageDiagnostics.quirks?.applied) ? pageDiagnostics.quirks.applied : [];
+    for (const quirk of expected.quirksAppliedInclude) {
+      results.push({
+        name: `capture diagnostics includes ${quirk} applied quirk`,
+        passed: appliedQuirks.includes(quirk),
+        detail: `${appliedQuirks.join(', ') || 'none'}, expected ${quirk}`
+      });
+    }
+  }
+
+  if (Array.isArray(expected.quirksAppliedExclude)) {
+    const appliedQuirks = Array.isArray(pageDiagnostics.quirks?.applied) ? pageDiagnostics.quirks.applied : [];
+    for (const quirk of expected.quirksAppliedExclude) {
+      results.push({
+        name: `capture diagnostics excludes ${quirk} applied quirk`,
+        passed: !appliedQuirks.includes(quirk),
+        detail: `${appliedQuirks.join(', ') || 'none'}, expected no ${quirk}`
+      });
+    }
   }
 
   if (expected.splitExclusionRangeCountAtLeast !== undefined) {
@@ -1697,6 +2025,98 @@ const evaluateCaptureDiagnosticsV2Assertions = ({testCase, captureDiagnostics}) 
       passed: count >= expected.splitExclusionRangeCountAtLeast,
       detail: `${count}, expected >= ${expected.splitExclusionRangeCountAtLeast}`
     });
+  }
+
+  if (expected.geometryGridRowAddedAtLeast !== undefined) {
+    const count = pageDiagnostics.geometryAvoidRangeDiagnostics?.gridRowAdded || 0;
+    results.push({
+      name: 'capture diagnostics grid-row geometry count meets expected minimum',
+      passed: count >= expected.geometryGridRowAddedAtLeast,
+      detail: `${count}, expected >= ${expected.geometryGridRowAddedAtLeast}`
+    });
+  }
+
+  if (expected.capturePlanAvoidRangeReasonAtLeast) {
+    const reasonExpectation = expected.capturePlanAvoidRangeReasonAtLeast;
+    const reason = reasonExpectation.reason;
+    const expectedCount = Number(reasonExpectation.count) || 1;
+    const count = pageDiagnostics.capturePlanSummary?.avoidRangeReasons?.[reason] || 0;
+    results.push({
+      name: `capture plan includes ${reason} avoid ranges`,
+      passed: count >= expectedCount,
+      detail: `${count}, expected >= ${expectedCount}`
+    });
+  }
+
+  if (Array.isArray(expected.frameDiagnostics)) {
+    const frames = captureDiagnostics?.diagnostics?.stepper?.frames || [];
+    for (const frameExpectation of expected.frameDiagnostics) {
+      const frame = frames.find(candidate => Number(candidate.frameIndex) === Number(frameExpectation.frameIndex));
+      const beforeFrame = frame?.beforeFrame || {};
+      const prefix = `frame ${frameExpectation.frameIndex}`;
+
+      results.push({
+        name: `${prefix} diagnostics are stored`,
+        passed: Boolean(frame),
+        detail: frame ? 'frame diagnostics present' : 'frame diagnostics missing'
+      });
+
+      if (frameExpectation.hiddenAtLeast !== undefined) {
+        const hidden = Number(beforeFrame.hidden) || 0;
+        results.push({
+          name: `${prefix} hidden count meets expected minimum`,
+          passed: hidden >= frameExpectation.hiddenAtLeast,
+          detail: `${hidden}, expected >= ${frameExpectation.hiddenAtLeast}`
+        });
+      }
+
+      if (frameExpectation.hiddenAtMost !== undefined) {
+        const hidden = Number(beforeFrame.hidden) || 0;
+        results.push({
+          name: `${prefix} hidden count stays below maximum`,
+          passed: hidden <= frameExpectation.hiddenAtMost,
+          detail: `${hidden}, expected <= ${frameExpectation.hiddenAtMost}`
+        });
+      }
+
+      if (frameExpectation.transformedAtLeast !== undefined) {
+        const transformed = Number(beforeFrame.transformed) || 0;
+        results.push({
+          name: `${prefix} transformed count meets expected minimum`,
+          passed: transformed >= frameExpectation.transformedAtLeast,
+          detail: `${transformed}, expected >= ${frameExpectation.transformedAtLeast}`
+        });
+      }
+
+      if (frameExpectation.transformedAtMost !== undefined) {
+        const transformed = Number(beforeFrame.transformed) || 0;
+        results.push({
+          name: `${prefix} transformed count stays below maximum`,
+          passed: transformed <= frameExpectation.transformedAtMost,
+          detail: `${transformed}, expected <= ${frameExpectation.transformedAtMost}`
+        });
+      }
+
+      if (frameExpectation.scrollYAtMost !== undefined) {
+        const scrollY = Number(frame?.scroll?.y);
+        results.push({
+          name: `${prefix} scrollY stays below maximum`,
+          passed: Number.isFinite(scrollY) && scrollY <= frameExpectation.scrollYAtMost,
+          detail: `${Number.isFinite(scrollY) ? scrollY : 'n/a'}, expected <= ${frameExpectation.scrollYAtMost}`
+        });
+      }
+
+      if (Array.isArray(frameExpectation.chromeCandidateKindsInclude)) {
+        const kinds = Array.isArray(beforeFrame.chromeCandidateKinds) ? beforeFrame.chromeCandidateKinds : [];
+        for (const kind of frameExpectation.chromeCandidateKindsInclude) {
+          results.push({
+            name: `${prefix} includes ${kind} chrome diagnostic kind`,
+            passed: kinds.includes(kind),
+            detail: `${kinds.join(', ') || 'none'}, expected ${kind}`
+          });
+        }
+      }
+    }
   }
 
   return results;

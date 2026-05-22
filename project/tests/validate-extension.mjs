@@ -31,8 +31,10 @@ for (const file of [
   'capture/CaptureDiagnostics.js',
   'capture/CanvasSizeGuard.js',
   'capture/SingleFileExportAttempt.js',
+  'capture/QuirksLayer.js',
   'capture/LazyLoadWarmer.js',
   'capture/PageProbe.js',
+  'capture/SplitBoundaryPlanner.js',
   'capture/PositionPlanner.js',
   'capture/ViewportCapture.js',
   'capture/CanvasStitcher.js',
@@ -61,9 +63,30 @@ const assertNotIncludes = (value, unexpected, message) => {
   }
 };
 
+const assert = (condition, message) => {
+  if (!condition) {
+    throw new Error(message);
+  }
+};
+
+const loadSelfClass = (source, className) => {
+  const sandboxSelf = {};
+  const loadedClass = Function('self', `${source}\nreturn self.${className};`)(sandboxSelf);
+  if (typeof loadedClass !== 'function') {
+    throw new Error(`Unable to load ${className}`);
+  }
+
+  return loadedClass;
+};
+
 const runnerSource = fs.readFileSync(path.join(projectRoot, 'tests', 'real-site-runner.mjs'), 'utf8');
 const captureFlowSource = fs.readFileSync(path.join(projectRoot, 'tests', 'capture-flow.mjs'), 'utf8');
+const offlinePngQaSource = fs.readFileSync(path.join(projectRoot, 'tests', 'offline-png-qa.mjs'), 'utf8');
+const stickyCleanupSmokeSource = fs.readFileSync(path.join(projectRoot, 'tests', 'sticky-cleanup-smoke.mjs'), 'utf8');
+const workerSource = fs.readFileSync(path.join(codeRoot, 'worker.js'), 'utf8');
 const pageProbeSource = fs.readFileSync(path.join(codeRoot, 'capture/PageProbe.js'), 'utf8');
+const quirkLayerSource = fs.readFileSync(path.join(codeRoot, 'capture/QuirksLayer.js'), 'utf8');
+const splitBoundaryPlannerSource = fs.readFileSync(path.join(codeRoot, 'capture/SplitBoundaryPlanner.js'), 'utf8');
 const positionPlannerSource = fs.readFileSync(path.join(codeRoot, 'capture/PositionPlanner.js'), 'utf8');
 const canvasStitcherSource = fs.readFileSync(path.join(codeRoot, 'capture/CanvasStitcher.js'), 'utf8');
 const canvasTilerSource = fs.readFileSync(path.join(codeRoot, 'capture/CanvasTiler.js'), 'utf8');
@@ -71,16 +94,64 @@ const canvasSizeGuardSource = fs.readFileSync(path.join(codeRoot, 'capture/Canva
 const fixedStickyNormalizerSource = fs.readFileSync(path.join(codeRoot, 'content/FixedStickyNormalizer.js'), 'utf8');
 const contentAgentSource = fs.readFileSync(path.join(codeRoot, 'content/ContentAgent.js'), 'utf8');
 const contentAgentClientSource = fs.readFileSync(path.join(codeRoot, 'capture/ContentAgentClient.js'), 'utf8');
+const captureControllerSource = fs.readFileSync(path.join(codeRoot, 'capture/CaptureController.js'), 'utf8');
+const captureStepperSource = fs.readFileSync(path.join(codeRoot, 'capture/CaptureStepper.js'), 'utf8');
+const captureDiagnosticsSource = fs.readFileSync(path.join(codeRoot, 'capture/CaptureDiagnostics.js'), 'utf8');
+const captureStoreSource = fs.readFileSync(path.join(codeRoot, 'capture/CaptureStore.js'), 'utf8');
+const prepareCaptureSource = contentAgentSource.slice(
+  contentAgentSource.indexOf('prepareCapture(options = {})'),
+  contentAgentSource.indexOf('normalizeStickyForCapture(options = {})')
+);
 
 assertIncludes(
   pageProbeSource,
   'splitExclusionRanges',
   'PageProbe must expose split exclusion ranges for card/section-safe multi-part boundaries'
 );
+for (const splitLayoutDiagnostic of [
+  'detectSplitLayoutRisk',
+  'splitLayoutRiskReason',
+  'two-column-sticky-media-mismatch',
+  'shortColumnSide',
+  'tallColumnRatio'
+]) {
+  assertIncludes(
+    pageProbeSource,
+    splitLayoutDiagnostic,
+    `PageProbe must expose passive split-layout diagnostics: ${splitLayoutDiagnostic}`
+  );
+}
 assertIncludes(
   pageProbeSource,
   'riskFlags',
-  'PageProbe must expose cheap risk flags for fixed/sticky and visible nav-overlay capture policy'
+  'PageProbe must expose cheap risk flags for fixed/sticky and blocking-modal capture policy'
+);
+assertIncludes(
+  pageProbeSource,
+  'const windowScrollThreshold = Math.max(40, viewportHeight * 0.05)',
+  'PageProbe must prefer window scroll when the page has meaningful window scroll range'
+);
+for (const internalScrollThreshold of [
+  'area < viewportArea * 0.5',
+  'rect.width < viewportWidth * 0.65',
+  'rect.height < viewportHeight * 0.55',
+  'windowScrollHeight <= windowScrollThreshold'
+]) {
+  assertIncludes(
+    pageProbeSource,
+    internalScrollThreshold,
+    `PageProbe internal scroll selection must keep strict mechanical threshold: ${internalScrollThreshold}`
+  );
+}
+assertNotIncludes(
+  pageProbeSource,
+  'isLikelySidePanel',
+  'PageProbe internal scroll target selection must not use sidebar/nav/menu descriptor semantics'
+);
+assertNotIncludes(
+  pageProbeSource,
+  'isLikelyEmptyWorkspace',
+  'PageProbe internal scroll target selection must not use workspace descriptor semantics'
 );
 assertIncludes(
   pageProbeSource,
@@ -90,7 +161,127 @@ assertIncludes(
 assertIncludes(
   pageProbeSource,
   'skipLazyWarmupBeforeFirstFrame',
-  'PageProbe capturePolicy must preserve first-frame visible nav overlays from pre-capture warmup'
+  'PageProbe capturePolicy must skip pre-frame-0 lazy warmup only for viewport-only blocking states'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  "policy.mode === 'viewport-only'",
+  'FixedStickyNormalizer must skip blanket sticky normalization for viewport-only captures'
+);
+assertNotIncludes(
+  pageProbeSource,
+  'normalizeStickyBeforeFirstFrame',
+  'PageProbe must not expose sticky normalization as an opt-in capture policy flag'
+);
+assertNotIncludes(
+  fixedStickyNormalizerSource,
+  'flag-disabled',
+  'FixedStickyNormalizer must make sticky normalization the full-page default instead of a disabled flag path'
+);
+assertNotIncludes(
+  fixedStickyNormalizerSource,
+  'normalizeStickyBeforeFirstFrame',
+  'FixedStickyNormalizer must not gate blanket sticky normalization on an opt-in flag'
+);
+assertNotIncludes(
+  prepareCaptureSource,
+  'prepareStickyNormalization',
+  'ContentAgent.prepareCapture must remain basic and must not normalize sticky before warmup/final measure'
+);
+assertIncludes(
+  contentAgentSource,
+  'normalizeStickyForCapture',
+  'ContentAgent must expose a separate post-warmup sticky normalization step'
+);
+assertIncludes(
+  contentAgentClientSource,
+  'async normalizeSticky',
+  'ContentAgentClient must call sticky normalization separately from basic prepare'
+);
+assertIncludes(
+  captureControllerSource,
+  'postPlan',
+  'CaptureController must run sticky normalization after final measure and capture planning'
+);
+assertIncludes(
+  pageProbeSource,
+  'visibleOverlayCandidateCount',
+  'PageProbe must keep visible overlay candidates as diagnostics without making them capture-policy risk flags'
+);
+assertIncludes(
+  workerSource,
+  'capture/QuirksLayer.js',
+  'worker must load QuirksLayer before CaptureController'
+);
+assertIncludes(
+  captureControllerSource,
+  'new self.QuirksLayer',
+  'CaptureController must run the small QuirksLayer before page measurement'
+);
+assertIncludes(
+  captureControllerSource,
+  'beforeMeasure',
+  'CaptureController must run quirks before initial PageProbe measurement'
+);
+assertIncludes(
+  captureControllerSource,
+  'afterWarmup',
+  'CaptureController must run quirks after lazy warmup before final PageProbe measurement'
+);
+assertIncludes(
+  captureControllerSource,
+  'quirks.cleanup',
+  'CaptureController must restore quirk marker attributes during cleanup'
+);
+assertIncludes(
+  quirkLayerSource,
+  'preserve-fixed-background',
+  'QuirksLayer must expose the fixed-background preservation quirk'
+);
+assertIncludes(
+  quirkLayerSource,
+  'known-lightbox-root',
+  'QuirksLayer must expose the known lightbox capture-root quirk'
+);
+assertIncludes(
+  quirkLayerSource,
+  "lightboxSelector = '#lightbox-wrap'",
+  'known-lightbox-root must use a narrow known selector'
+);
+assertNotIncludes(
+  quirkLayerSource,
+  '[class*="fullscreen"',
+  'known-lightbox-root must not infer from generic fullscreen classes'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'data-screenshot-extension-quirk-capture-root',
+  'FixedStickyNormalizer must preserve the selected quirk capture root'
+);
+assertIncludes(
+  pageProbeSource,
+  'data-screenshot-extension-quirk-capture-root',
+  'PageProbe must be able to consume QuirksLayer capture-root markers'
+);
+assertIncludes(
+  pageProbeSource,
+  "composeMode: 'lightbox-root'",
+  'PageProbe must treat known lightbox roots as the capture target'
+);
+assertIncludes(
+  contentAgentSource,
+  'fixedBackgroundAttribute',
+  'ContentAgent must preserve fixed background attachment only for marked QuirksLayer candidates'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'data-screenshot-extension-quirk-fixed-background',
+  'FixedStickyNormalizer must preserve only fixed-background candidates marked by QuirksLayer'
+);
+assertNotIncludes(
+  pageProbeSource,
+  "riskFlags.push('visible_nav_overlay')",
+  'PageProbe must not let ordinary headers or overlay candidates drive capture policy through visible_nav_overlay'
 );
 assertIncludes(
   captureFlowSource,
@@ -103,15 +294,181 @@ assertIncludes(
   'PageProbe must protect Apple-style heading plus gallery/card sections from split boundaries'
 );
 assertIncludes(
+  pageProbeSource,
+  'gridRowAdded',
+  'PageProbe must report compact diagnostics for grid-row avoid ranges'
+);
+assertIncludes(
+  pageProbeSource,
+  'elapsedMs',
+  'PageProbe must report geometry avoid range pass timing'
+);
+assertIncludes(
+  pageProbeSource,
+  'safetyMarginCssPx',
+  'PageProbe must report the geometry avoid range safety margin'
+);
+assertIncludes(
+  pageProbeSource,
+  "'grid-row': 72",
+  'PageProbe must keep a larger safety margin around grid-row ranges'
+);
+assertIncludes(
+  pageProbeSource,
+  "'grid-row'",
+  'PageProbe must add grid-row avoid ranges through the shared capture plan'
+);
+assertIncludes(
+  captureFlowSource,
+  'grid-row-boundary-shift-page',
+  'capture-flow must include a fixture proving grid-row avoid ranges shift capture boundaries'
+);
+assertIncludes(
+  captureFlowSource,
+  'geometryGridRowAddedAtLeast',
+  'capture-flow must assert grid-row range creation instead of relying on screenshots alone'
+);
+assertIncludes(
+  captureFlowSource,
+  'capturePlanAvoidRangeReasonAtLeast',
+  'capture-flow must assert grid-row ranges enter capturePlan.avoidRanges'
+);
+assertIncludes(
+  captureFlowSource,
+  'scrollYAtMost',
+  'capture-flow must assert grid-row ranges change planned frame scroll positions'
+);
+assertIncludes(
   positionPlannerSource,
   'createYAxisPositions',
   'PositionPlanner must use split exclusion ranges when planning vertical capture seams'
+);
+assertIncludes(
+  workerSource,
+  'capture/SplitBoundaryPlanner.js',
+  'worker must load SplitBoundaryPlanner before PositionPlanner'
+);
+assertIncludes(
+  splitBoundaryPlannerSource,
+  'capturePlan?.avoidRanges',
+  'PositionPlanner must prefer capturePlan.avoidRanges before falling back to splitExclusionRanges'
+);
+assertIncludes(
+  splitBoundaryPlannerSource,
+  'yStartCssPx',
+  'PositionPlanner must read capturePlan avoid range start coordinates'
+);
+assertIncludes(
+  splitBoundaryPlannerSource,
+  'yEndCssPx',
+  'PositionPlanner must read capturePlan avoid range end coordinates'
 );
 assertIncludes(
   positionPlannerSource,
   'adjustPositionForSafeSeam',
   'PositionPlanner must be able to add overlap when a viewport seam would cut split-sensitive content'
 );
+{
+  const PositionPlanner = loadSelfClass(`${splitBoundaryPlannerSource}\n${positionPlannerSource}`, 'PositionPlanner');
+  const planner = new PositionPlanner({offset: 50});
+  const baselinePositions = planner.createYAxisPositions(2000, 500, {});
+  const capturePlanPositions = planner.createYAxisPositions(2000, 500, {
+    capturePlan: {
+      avoidRanges: [{
+        yStartCssPx: 460,
+        yEndCssPx: 530,
+        reason: 'card'
+      }]
+    }
+  });
+  const fallbackPositions = planner.createYAxisPositions(2000, 500, {
+    capturePlan: {
+      avoidRanges: []
+    },
+    splitExclusionRanges: [{
+      top: 460,
+      bottom: 530,
+      reason: 'card'
+    }]
+  });
+  const gridRowPositions = planner.createYAxisPositions(2000, 500, {
+    capturePlan: {
+      avoidRanges: [{
+        yStartCssPx: 460,
+        yEndCssPx: 530,
+        reason: 'grid-row'
+      }]
+    }
+  });
+
+  assert(
+    baselinePositions[1] === 450,
+    'PositionPlanner test setup must start with an unshifted default first seam'
+  );
+  assert(
+    capturePlanPositions[1] < baselinePositions[1],
+    'PositionPlanner must shift seams away from capturePlan.avoidRanges'
+  );
+  assert(
+    gridRowPositions[1] === capturePlanPositions[1],
+    'PositionPlanner must shift seams away from grid-row capturePlan.avoidRanges'
+  );
+  assert(
+    fallbackPositions[1] === capturePlanPositions[1],
+    'PositionPlanner must fall back to splitExclusionRanges when capturePlan.avoidRanges is empty'
+  );
+}
+{
+  const loadCanvasClass = (source, className) => Function(
+    'self',
+    `${splitBoundaryPlannerSource}\n${source}\nreturn self.${className};`
+  )({});
+  const CanvasStitcher = loadCanvasClass(canvasStitcherSource, 'CanvasStitcher');
+  const CanvasTiler = loadCanvasClass(canvasTilerSource, 'CanvasTiler');
+  const CanvasSizeGuard = loadCanvasClass(canvasSizeGuardSource, 'CanvasSizeGuard');
+  const seamContext = {
+    normalizeExclusionRanges: () => [{
+      top: 430,
+      bottom: 500,
+      reason: 'card'
+    }],
+    normalizeSplitCandidates: () => []
+  };
+  const seam = {
+    current: 400,
+    defaultBoundary: 450
+  };
+  const stitcherBoundary = CanvasStitcher.prototype.chooseVerticalSeamBoundary.call(seamContext, seam);
+  const tilerBoundary = CanvasTiler.prototype.chooseVerticalSeamBoundary.call(seamContext, seam);
+
+  assert(
+    stitcherBoundary !== seam.defaultBoundary && stitcherBoundary <= 430,
+    'CanvasStitcher must shift image seams away from capturePlan avoid ranges through SplitBoundaryPlanner'
+  );
+  assert(
+    tilerBoundary === stitcherBoundary,
+    'CanvasTiler must use the same SplitBoundaryPlanner seam decision as CanvasStitcher'
+  );
+
+  const sizeGuard = new CanvasSizeGuard();
+  const partBoundary = sizeGuard.findSafeBoundary({
+    y: 0,
+    hardLimit: 2000,
+    height: 3600,
+    tilePixelHeight: 2000,
+    candidates: [],
+    exclusionRanges: [{
+      top: 1900,
+      bottom: 2100,
+      reason: 'grid-row'
+    }]
+  });
+
+  assert(
+    partBoundary !== 2000 && partBoundary <= 1900,
+    'CanvasSizeGuard must shift tiled-output part boundaries away from avoid ranges through SplitBoundaryPlanner'
+  );
+}
 assertIncludes(
   canvasStitcherSource,
   'chooseVerticalSeamBoundary',
@@ -124,8 +481,8 @@ assertIncludes(
 );
 assertIncludes(
   canvasSizeGuardSource,
-  'isInsideExclusion',
-  'CanvasSizeGuard must avoid placing tiled-output boundaries inside split exclusion ranges'
+  'SplitBoundaryPlanner.chooseSafeSplitBoundary',
+  'CanvasSizeGuard must use SplitBoundaryPlanner for tiled-output part boundaries'
 );
 assertIncludes(
   fixedStickyNormalizerSource,
@@ -150,12 +507,82 @@ assertIncludes(
 assertIncludes(
   fixedStickyNormalizerSource,
   'convertFixedToAbsolute',
-  'FixedStickyNormalizer must use transform-first normalization for fixed chrome instead of only hiding'
+  'FixedStickyNormalizer must keep fixed-to-absolute as the fallback for non-header fixed elements'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'isLikelyFixedTopHeader',
+  'FixedStickyNormalizer must hide repeated fixed top headers after the first frame'
 );
 assertIncludes(
   fixedStickyNormalizerSource,
   'convertStickyToRelative',
-  'FixedStickyNormalizer must convert sticky chrome to relative after the first frame'
+  'FixedStickyNormalizer must convert sticky elements to relative during blanket sticky normalization'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'shadowRootCount',
+  'FixedStickyNormalizer must report compact shadow-root coverage for sticky normalization'
+);
+assertIncludes(
+  contentAgentSource,
+  'collectCleanupState',
+  'ContentAgent must expose cleanup diagnostics for temporary sticky normalization markers'
+);
+assertIncludes(
+  contentAgentClientSource,
+  'aggregateCleanupResults',
+  'ContentAgentClient must aggregate cleanup diagnostics across frames'
+);
+assertIncludes(
+  contentAgentClientSource,
+  'framesWithNormalizedSticky',
+  'ContentAgentClient must aggregate how many frames normalized sticky elements'
+);
+assertIncludes(
+  captureControllerSource,
+  'diagnostics.stickyNormalization',
+  'CaptureController must attach compact sticky normalization diagnostics to capture diagnostics'
+);
+assertIncludes(
+  captureDiagnosticsSource,
+  'stickyNormalizationSummary',
+  'CaptureDiagnostics v2 must expose sticky normalization summary'
+);
+assertIncludes(
+  captureDiagnosticsSource,
+  'recordTiming',
+  'CaptureDiagnostics v2 must expose phase timing diagnostics for broad research runs'
+);
+assertIncludes(
+  captureControllerSource,
+  "timePhase('page_probe_initial'",
+  'CaptureController must time the initial PageProbe phase'
+);
+assertIncludes(
+  captureControllerSource,
+  "timePhase('capture_stepper'",
+  'CaptureController must time the stepper phase'
+);
+assertIncludes(
+  captureControllerSource,
+  "'download_export'",
+  'CaptureController must time the download/export phase'
+);
+assertIncludes(
+  stickyCleanupSmokeSource,
+  'stack.restoreAll()',
+  'sticky cleanup smoke must verify mutation-stack restoration'
+);
+assertIncludes(
+  stickyCleanupSmokeSource,
+  "data-screenshot-extension-sticky-normalized",
+  'sticky cleanup smoke must assert temporary sticky marker cleanup'
+);
+assertIncludes(
+  stickyCleanupSmokeSource,
+  'shadowRootCount',
+  'sticky cleanup smoke must cover sticky normalization inside open Shadow DOM'
 );
 assertIncludes(
   fixedStickyNormalizerSource,
@@ -165,7 +592,12 @@ assertIncludes(
 assertIncludes(
   fixedStickyNormalizerSource,
   'isLikelyVisibleNavOverlay',
-  'FixedStickyNormalizer must suppress visible nav overlays after frame 0 when capturePolicy requests it'
+  'FixedStickyNormalizer may suppress visible nav overlays after frame 0 only when an explicit capturePolicy requests it'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'suppressVisibleNavOverlay: false',
+  'FixedStickyNormalizer default policy must not treat ordinary headers as visible nav overlays'
 );
 assertIncludes(
   fixedStickyNormalizerSource,
@@ -191,6 +623,123 @@ assertIncludes(
   contentAgentClientSource,
   'aggregate.transformed',
   'ContentAgentClient must preserve transformed-element diagnostics from all frames'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'collectChromeDiagnostics',
+  'FixedStickyNormalizer must expose passive runtime diagnostics for repeated fixed/sticky chrome'
+);
+assertIncludes(
+  fixedStickyNormalizerSource,
+  'chromeCandidates',
+  'FixedStickyNormalizer must report chrome candidates without changing capture behavior'
+);
+assertIncludes(
+  contentAgentClientSource,
+  'chromeCandidates',
+  'ContentAgentClient must aggregate chrome candidate diagnostics from all frames'
+);
+assertIncludes(
+  captureStepperSource,
+  'analyzeRepeatedChrome',
+  'CaptureStepper must analyze repeated chrome across captured frames'
+);
+assertIncludes(
+  captureStepperSource,
+  'summarizeTiming',
+  'CaptureStepper must summarize per-frame timing diagnostics'
+);
+assertIncludes(
+  captureStepperSource,
+  'captureVisibleTabMs',
+  'CaptureStepper timing must isolate captureVisibleTab time'
+);
+for (const repeatedReason of [
+  'repeated-sticky-chrome',
+  'repeated-sidebar',
+  'repeated-cookie-strip',
+  'repeated-floating-widget'
+]) {
+  assertIncludes(
+    captureStepperSource,
+    repeatedReason,
+    `CaptureStepper must emit ${repeatedReason} diagnostics`
+  );
+}
+assertIncludes(
+  captureDiagnosticsSource,
+  'repeatedChromeSummary',
+  'CaptureDiagnostics must expose repeated chrome summary for reports and runner guards'
+);
+assertIncludes(
+  captureFlowSource,
+  'Repeated Chrome Diagnostics',
+  'capture-flow reports must print repeated chrome diagnostics'
+);
+assertIncludes(
+  captureFlowSource,
+  'Sticky Normalization Diagnostics',
+  'capture-flow reports must print compact sticky normalization diagnostics'
+);
+assertIncludes(
+  captureFlowSource,
+  'Cleanup Diagnostics',
+  'capture-flow reports must print cleanup diagnostics for temporary sticky markers'
+);
+assertIncludes(
+  runnerSource,
+  'Sticky normalization:',
+  'real-site runner reports must print compact sticky normalization diagnostics'
+);
+assertIncludes(
+  runnerSource,
+  'Cleanup sticky markers:',
+  'real-site runner reports must print cleanup diagnostics for sticky normalization markers'
+);
+assertIncludes(
+  runnerSource,
+  'Timing Diagnostics',
+  'real-site runner reports must print capture and stepper timing diagnostics'
+);
+assertIncludes(
+  captureStoreSource,
+  'waitForDownloadComplete',
+  'CaptureStore must wait for download lifecycle completion before reporting saved multi-part exports'
+);
+assertIncludes(
+  captureStoreSource,
+  'chrome.downloads.onChanged',
+  'CaptureStore must observe chrome download lifecycle state changes'
+);
+assertIncludes(
+  captureStoreSource,
+  'completedAt',
+  'CaptureStore must expose download completion timestamps in export diagnostics'
+);
+assertIncludes(
+  captureStoreSource,
+  'downloadCompleteTimeoutMs',
+  'CaptureStore download lifecycle waits must be bounded'
+);
+assertIncludes(
+  offlinePngQaSource,
+  'detectRepeatedHorizontalChromeInImage',
+  'offline PNG QA must detect repeated horizontal chrome inside a single tall PNG'
+);
+assertIncludes(
+  offlinePngQaSource,
+  'detectRepeatedSideChromeInImage',
+  'offline PNG QA must detect repeated sidebar/filter chrome inside a single tall PNG'
+);
+assertIncludes(
+  offlinePngQaSource,
+  'repeated-horizontal-chrome-in-image',
+  'offline PNG QA must report repeated horizontal chrome inside a single image'
+);
+assertIncludes(
+  offlinePngQaSource,
+  'repeated-${candidate.side}-chrome-in-image',
+  'offline PNG QA must report repeated left/right chrome inside a single image'
 );
 assertIncludes(
   captureFlowSource,
@@ -226,6 +775,61 @@ assertIncludes(
   captureFlowSource,
   'dimmed-popup-scroll-state-page',
   'capture:risk must include the scrollable dimmed-popup backdrop-state fixture'
+);
+assertIncludes(
+  captureFlowSource,
+  'fixed-top-header-page',
+  'capture:risk must include a fixed top header de-duplication fixture'
+);
+assertIncludes(
+  captureFlowSource,
+  'fixed-top-small-button-page',
+  'capture:risk must include a small fixed top button anti-regression fixture'
+);
+assertIncludes(
+  captureFlowSource,
+  'frameDiagnostics',
+  'capture-flow must assert frame-level hidden/transformed diagnostics for fixed top header behavior'
+);
+assertIncludes(
+  captureFlowSource,
+  'fixed-background-quirk-page',
+  'capture:risk must include the fixed-background preservation quirk fixture'
+);
+assertIncludes(
+  captureFlowSource,
+  'lightbox-root-quirk-page',
+  'capture:risk must include the known lightbox capture-root quirk fixture'
+);
+assertIncludes(
+  captureFlowSource,
+  'fullscreen-menu-not-lightbox-page',
+  'capture:risk must include a negative fullscreen-menu fixture for the known lightbox quirk'
+);
+assertIncludes(
+  captureFlowSource,
+  'quirksAppliedInclude',
+  'capture-flow must be able to assert that expected QuirksLayer hooks actually applied'
+);
+assertIncludes(
+  captureFlowSource,
+  'quirksAppliedExclude',
+  'capture-flow must be able to assert that unsafe QuirksLayer hooks did not apply'
+);
+assertIncludes(
+  captureFlowSource,
+  "quirksAppliedInclude: ['preserve-fixed-background']",
+  'fixed-background fixture must assert the preserve-fixed-background quirk diagnostic'
+);
+assertIncludes(
+  captureFlowSource,
+  "quirksAppliedInclude: ['known-lightbox-root']",
+  'lightbox-root fixture must assert the known-lightbox-root quirk diagnostic'
+);
+assertIncludes(
+  captureFlowSource,
+  "quirksAppliedExclude: ['known-lightbox-root']",
+  'fullscreen-menu negative fixture must assert that known-lightbox-root did not apply'
 );
 
 assertIncludes(
@@ -295,6 +899,7 @@ assertIncludes(
 const qaRunbookSource = readProjectFile('project/tests/qa-runbook.md');
 const currentContextSource = readProjectFile('project/docs/current-context.md');
 const captureRiskPolicySource = readProjectFile('project/docs/capture-risk-policy.md');
+const architectureSource = readProjectFile('project/docs/architecture.md');
 assertIncludes(
   qaRunbookSource,
   '/Users/dima/Desktop/For-Dima-from-Codex',
@@ -340,7 +945,7 @@ assertIncludes(
   'project/docs/capture-risk-policy.md',
   'current context must list capture-risk-policy as the source of truth for risk flags and policies'
 );
-for (const flag of ['fixed_sticky', 'visible_nav_overlay', 'blocking_modal', 'inaccessible_iframe']) {
+for (const flag of ['fixed_sticky', 'blocking_modal', 'inaccessible_iframe']) {
   assertIncludes(
     pageProbeSource,
     flag,
@@ -352,6 +957,38 @@ for (const flag of ['fixed_sticky', 'visible_nav_overlay', 'blocking_modal', 'in
     `capture risk policy must document engine risk flag ${flag}`
   );
 }
+for (const quirkTerm of ['QuirksLayer', 'preserve-fixed-background', 'known-lightbox-root']) {
+  assertIncludes(
+    captureRiskPolicySource,
+    quirkTerm,
+    `capture risk policy must document ${quirkTerm}`
+  );
+}
+assertIncludes(
+  architectureSource,
+  'QuirksLayer',
+  'architecture docs must include the small QuirksLayer in the capture flow'
+);
+assertIncludes(
+  captureRiskPolicySource,
+  'visible_overlay_candidate',
+  'capture risk policy must document visible overlay candidates as diagnostics, not runtime capture-policy flags'
+);
+assertIncludes(
+  captureRiskPolicySource,
+  'Runtime Repeated Chrome Diagnostics',
+  'capture risk policy must document runtime repeated chrome diagnostics'
+);
+assertIncludes(
+  currentContextSource,
+  'runtime repeated-chrome diagnostics',
+  'current context must mention the diagnostic-only repeated chrome layer'
+);
+assertIncludes(
+  currentContextSource,
+  'repeated sticky/header/sidebar chrome inside a single tall PNG',
+  'current context must mention the strengthened offline PNG repeated chrome detector'
+);
 for (const policyTerm of [
   'capture.scrollTarget.diagnostics.riskFlags',
   "captureAction: 'viewport-only'",
@@ -372,7 +1009,14 @@ for (const policyTerm of [
 }
 
 const goldenBaselines = readRepoJson('project/tests/golden-baselines/real-sites.json').baselines;
-for (const siteName of ['Cloudflare Blog', 'Dyson Vacuums', 'Next.js Docs']) {
+for (const siteName of [
+  'Allbirds Wool Runners',
+  'Apple iPhone',
+  'Apple MacBook Air',
+  'Cloudflare Blog',
+  'Dyson Vacuums',
+  'Next.js Docs'
+]) {
   const baseline = goldenBaselines.find(candidate => candidate.name === siteName);
   if (!baseline) {
     throw new Error(`golden baselines must include ${siteName}`);
@@ -380,13 +1024,33 @@ for (const siteName of ['Cloudflare Blog', 'Dyson Vacuums', 'Next.js Docs']) {
   if (!fs.existsSync(path.join(repoRoot, 'project/tests/golden-baselines', baseline.file))) {
     throw new Error(`golden baseline file missing for ${siteName}: ${baseline.file}`);
   }
+  for (const file of baseline.files || []) {
+    if (!fs.existsSync(path.join(repoRoot, 'project/tests/golden-baselines', file))) {
+      throw new Error(`golden baseline part missing for ${siteName}: ${file}`);
+    }
+  }
 }
 
 const realSites = readRepoJson('project/tests/real-sites.json').sites;
-for (const siteName of ['Cloudflare Blog', 'Dyson Vacuums', 'Next.js Docs']) {
+for (const siteName of [
+  'Allbirds Wool Runners',
+  'Apple iPhone',
+  'Apple MacBook Air',
+  'Cloudflare Blog',
+  'Dyson Vacuums',
+  'Next.js Docs'
+]) {
   const site = realSites.find(candidate => candidate.name === siteName);
   if (!site?.goldenBaseline?.file) {
     throw new Error(`${siteName} must reference its golden baseline from real-sites.json`);
+  }
+  if (!fs.existsSync(path.join(repoRoot, site.goldenBaseline.file))) {
+    throw new Error(`${siteName} real-sites golden baseline file is missing: ${site.goldenBaseline.file}`);
+  }
+  for (const file of site.goldenBaseline.files || []) {
+    if (!fs.existsSync(path.join(repoRoot, file))) {
+      throw new Error(`${siteName} real-sites golden baseline part is missing: ${file}`);
+    }
   }
 }
 const targetedRiskSites = realSites.filter(site => site.deepQa?.riskTags?.length);
