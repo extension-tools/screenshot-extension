@@ -10,7 +10,9 @@ const repoRoot = path.resolve(projectRoot, '..');
 const codeRoot = process.env.CAPTURE_EXTENSION_ROOT ?
   path.resolve(process.env.CAPTURE_EXTENSION_ROOT) :
   path.join(repoRoot, 'code');
-const configPath = path.join(projectRoot, 'tests', 'real-sites.json');
+const configPath = process.env.REAL_SITE_CONFIG_PATH ?
+  path.resolve(process.env.REAL_SITE_CONFIG_PATH) :
+  path.join(projectRoot, 'tests', 'real-sites.json');
 const qaReportPath = process.env.REAL_SITE_QA_REPORT_PATH ?
   path.resolve(process.env.REAL_SITE_QA_REPORT_PATH) :
   path.join(projectRoot, 'tests', 'real-site-qa.md');
@@ -27,6 +29,7 @@ const reviewLatestDir = reviewRoot;
 const optionalSampleReviewLimit = process.env.REVIEW_OPTIONAL_SAMPLE_LIMIT === undefined ?
   Number.POSITIVE_INFINITY :
   Number.parseInt(process.env.REVIEW_OPTIONAL_SAMPLE_LIMIT, 10);
+const preScrollY = Math.max(0, Number(process.env.REAL_SITE_PRE_SCROLL_Y) || 0);
 
 const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site';
 
@@ -323,10 +326,34 @@ const inspectPreCapturePageState = async page => {
       element.getAttribute('aria-modal'),
       element.getAttribute('aria-label')
     ].join(' ').toLowerCase();
+    const ancestorPositionFlags = element => {
+      let hasFixedAncestor = false;
+      let hasStickyAncestor = false;
+
+      for (let ancestor = element?.parentElement; ancestor && ancestor !== document.body && ancestor !== document.documentElement; ancestor = ancestor.parentElement) {
+        const position = getComputedStyle(ancestor).position;
+        if (position === 'fixed') {
+          hasFixedAncestor = true;
+        }
+        else if (position === 'sticky') {
+          hasStickyAncestor = true;
+        }
+
+        if (hasFixedAncestor && hasStickyAncestor) {
+          break;
+        }
+      }
+
+      return {
+        hasFixedAncestor,
+        hasStickyAncestor
+      };
+    };
     const documentHeight = Math.max(
       document.body?.scrollHeight || 0,
       document.documentElement?.scrollHeight || 0
     );
+    const windowScrollHeight = Math.max(0, documentHeight - viewportHeight);
     const bodyText = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
     const visibleElementCount = Array.from(document.body?.querySelectorAll('*') || [])
       .slice(0, 2000)
@@ -448,11 +475,14 @@ const inspectPreCapturePageState = async page => {
           className: String(element.className || '').slice(0, 120),
           role: element.getAttribute('role') || '',
           kind: candidateKind,
+          position: style.position || 'static',
           linkCount,
           wordCount,
           linkDensity: Number((linkCount / Math.max(1, wordCount)).toFixed(3)),
           scrollHeight: element.scrollHeight,
           clientHeight: element.clientHeight,
+          scrollableY: Math.max(0, element.scrollHeight - element.clientHeight),
+          ...ancestorPositionFlags(element),
           rect: {
             left: Math.round(rect.left),
             top: Math.round(rect.top),
@@ -491,15 +521,15 @@ const inspectPreCapturePageState = async page => {
     );
     const hasEntryGate = modalCandidates.some(candidate => candidate.entryGate);
     const hasFullscreenCandidate = modalCandidates.some(candidate => candidate.coversViewport);
-    const shouldStopAtViewport = hasModalCandidate && (scrollLockedByStyle || hasEntryGate);
-    const reason = hasEntryGate ?
-      'entry-gate-text' :
-      (hasModalCandidate && scrollLockedByStyle ?
-        'scroll-lock' :
-        (hasModalCandidate && hasFullscreenCandidate ? 'large-dialog-uncertain' : 'none'));
+    const shouldStopAtViewport = hasModalCandidate && scrollLockedByStyle;
+    const entryGateBlocking = hasEntryGate && shouldStopAtViewport;
+    const reason = shouldStopAtViewport ?
+      'scroll-lock' :
+      (hasModalCandidate && hasFullscreenCandidate ? 'large-dialog-uncertain' : 'none');
 
     return {
       documentHeight,
+      windowScrollHeight,
       viewportWidth,
       viewportHeight,
       hasScrollableDocument: documentHeight > viewportHeight + 10,
@@ -511,6 +541,7 @@ const inspectPreCapturePageState = async page => {
       scrollContainerCandidates,
       hasModalCandidate,
       hasEntryGate,
+      entryGateBlocking,
       blockingModalReason: reason,
       blockingModalUncertain: reason === 'large-dialog-uncertain',
       blockingModalCaptureAction: shouldStopAtViewport ? 'viewport-only' : 'continue',
@@ -1155,6 +1186,147 @@ const assessBlockingModalGuard = ({pageState, aggregate, visibleScreenshot, capt
   };
 };
 
+const hasLargeNonBlockingModalCandidate = pageState => {
+  return (pageState?.modalCandidates || []).some(candidate =>
+    candidate.coversViewport &&
+    candidate.areaRatio >= 0.9 &&
+    pageState.blockingModalCaptureAction !== 'viewport-only'
+  );
+};
+
+const assessDimmedBackdropContinuityGuard = ({pageState, pngs, visibleScreenshot}) => {
+  if (!hasLargeNonBlockingModalCandidate(pageState)) {
+    return {
+      passed: true,
+      skipped: true,
+      reason: 'no large non-blocking modal/backdrop candidate'
+    };
+  }
+
+  const capture = pngs?.[0]?.png || null;
+  const viewport = visibleScreenshot ? PNG.sync.read(visibleScreenshot) : null;
+  const viewportBitmapHeight = viewport?.height || 0;
+  if (!capture || viewportBitmapHeight <= 0 || capture.height < viewportBitmapHeight * 1.8) {
+    return {
+      passed: true,
+      skipped: true,
+      reason: 'capture is too short for backdrop continuity comparison'
+    };
+  }
+
+  const top = analyzePngRegion(capture, {
+    topRatio: 0,
+    bottomRatio: Math.min(1, viewportBitmapHeight / capture.height),
+    samplesX: 48,
+    samplesY: 48
+  });
+  const lowerStart = Math.min(capture.height - 1, Math.round(viewportBitmapHeight * 1.2));
+  const lowerEnd = Math.min(capture.height, lowerStart + viewportBitmapHeight);
+  const lower = analyzePngRegion(capture, {
+    topRatio: lowerStart / capture.height,
+    bottomRatio: lowerEnd / capture.height,
+    samplesX: 48,
+    samplesY: 48
+  });
+  const topLooksDimmed = top?.grayRatio >= 0.35 &&
+    top.meanBrightness <= 190 &&
+    top.meanChroma <= 18;
+  const lowerLooksUndimmed = lower &&
+    lower.meanBrightness - top.meanBrightness >= 28 &&
+    top.grayRatio - lower.grayRatio >= 0.25;
+  const passed = !(topLooksDimmed && lowerLooksUndimmed);
+
+  return {
+    passed,
+    skipped: false,
+    top,
+    lower,
+    viewportBitmapHeight,
+    issues: passed ? [] : [
+      `top viewport appears dimmed (${formatImageAnalysis(top)}) but lower capture appears undimmed (${formatImageAnalysis(lower)})`
+    ]
+  };
+};
+
+const assessUnexpectedShortPageRisk = ({site, pageState, viewport}) => {
+  if (site.expect?.heightGreaterThanViewport === false) {
+    return {
+      triggered: false,
+      skipped: true,
+      reason: 'site does not expect multi-screen output'
+    };
+  }
+
+  if (!pageState || pageState.error) {
+    return {
+      triggered: false,
+      skipped: true,
+      reason: pageState?.error ? `page-state error: ${pageState.error}` : 'missing page state'
+    };
+  }
+
+  if (pageState.blockingModalCaptureAction === 'viewport-only') {
+    return {
+      triggered: false,
+      skipped: true,
+      reason: 'blocking modal intentionally limits capture to the first viewport'
+    };
+  }
+
+  const viewportHeight = pageState.viewportHeight || viewport?.height || 0;
+  const shortDocumentThreshold = Math.max(40, viewportHeight * 0.05);
+  const documentHeight = pageState.documentHeight || 0;
+  const windowScrollHeight = pageState.windowScrollHeight ?? Math.max(0, documentHeight - viewportHeight);
+  const hasHighConfidenceInternalTarget = (pageState.scrollContainerCandidates || []).some(candidate => {
+    const rect = candidate.rect || {};
+    const widthRatio = rect.width / Math.max(1, pageState.viewportWidth || viewport?.width || 0);
+    const heightRatio = rect.height / Math.max(1, viewportHeight);
+    const areaRatio = (rect.width * rect.height) / Math.max(1, (pageState.viewportWidth || viewport?.width || 0) * viewportHeight);
+    const edgeAnchoredNarrow = widthRatio < 0.45 &&
+      (rect.left <= (pageState.viewportWidth || viewport?.width || 0) * 0.08 ||
+        rect.left + rect.width >= (pageState.viewportWidth || viewport?.width || 0) * 0.92);
+
+    return widthRatio >= 0.65 &&
+      heightRatio >= 0.55 &&
+      areaRatio >= 0.5 &&
+      !edgeAnchoredNarrow;
+  });
+  const triggered = viewportHeight > 0 &&
+    documentHeight <= viewportHeight + shortDocumentThreshold &&
+    windowScrollHeight <= shortDocumentThreshold &&
+    !hasHighConfidenceInternalTarget;
+
+  return {
+    triggered,
+    skipped: false,
+    documentHeight,
+    viewportHeight,
+    windowScrollHeight,
+    shortDocumentThreshold: Math.round(shortDocumentThreshold),
+    highConfidenceInternalTarget: hasHighConfidenceInternalTarget,
+    reason: triggered ?
+      'expected multi-screen page, but pre-capture DOM is near one viewport and no high-confidence internal scroll target was found' :
+      'page has measurable document scroll or a high-confidence internal scroll target'
+  };
+};
+
+const isReviewOnlyDeepQaIssue = issue => {
+  return /^possible repeated (sidebar-nav|filter-panel) candidate across output parts/.test(issue) ||
+    /^possible repeated left docs\/sidebar chrome below first viewport/.test(issue) ||
+    /^split-boundary text risk: tagged site produced multi-part output/.test(issue);
+};
+
+const classifyDeepQaIssues = deepQaVisualGuard => {
+  const issues = deepQaVisualGuard?.issues || [];
+  const reviewIssues = issues.filter(isReviewOnlyDeepQaIssue);
+  const unstableIssues = issues.filter(issue => !isReviewOnlyDeepQaIssue(issue));
+
+  return {
+    reviewIssues,
+    unstableIssues
+  };
+};
+
 const waitForAppShellLoadedState = async ({page, site}) => {
   if (site.targetSegment !== 'app-shell') {
     return {
@@ -1212,8 +1384,14 @@ const summarizeUnsettledScrollFrames = captureDiagnostics => {
     .map(frame => {
       const planned = frame.position || {};
       const actual = frame.scroll || {};
+      const state = frame.scrollDiagnostics || {};
+      const maxY = state.maxY ?? actual.maxY;
+      const atMaxY = state.atMaxY ?? actual.atMaxY;
+      const targetType = state.targetType || actual.targetType || 'n/a';
+      const clamped = state.settledAtScrollEnd ? '; settledAtScrollEnd yes' : '';
+      const max = maxY === undefined ? '' : `; maxY ${maxY}; atMaxY ${atMaxY ? 'yes' : 'no'}${clamped}`;
 
-      return `frame ${frame.frameIndex}: planned ${planned.x || 0},${planned.y || 0}; actual ${actual.x || 0},${actual.y || 0}`;
+      return `frame ${frame.frameIndex}: planned ${planned.x || 0},${planned.y || 0}; actual ${actual.x || 0},${actual.y || 0}; target ${targetType}${max}`;
     });
 };
 
@@ -1221,7 +1399,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
   const assertions = [];
   const visibleScreenshot = preCaptureVisibleScreenshot ||
     await page.screenshot({animations: 'disabled'}).catch(() => null);
-  const statusHints = [];
+  const lookFirstHints = [];
+  const reviewHints = [];
   const blockingModalDetectedDuringCapture = captureDetectedBlockingModal(captureDiagnostics);
   const captureBlockingModal = captureDiagnostics?.capture?.scrollTarget?.diagnostics?.blockingModal || null;
   const aggregate = pngs?.length > 1 ? {
@@ -1303,7 +1482,7 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
     firstViewportGuard.dynamicModalAppearance = true;
     firstViewportAssertion.passed = true;
     firstViewportAssertion.detail = 'dynamic modal/overlay appeared during capture; classified for review instead of hard FAIL';
-    statusHints.push('dynamic modal/overlay appeared during capture');
+    lookFirstHints.push('dynamic modal/overlay appeared during capture');
   }
 
   assertions.push({
@@ -1341,6 +1520,31 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
         `${blockingModalGuard.aggregateHeight}px stays within first viewport ${blockingModalGuard.viewportBitmapHeight}px` :
         blockingModalGuard.issues.join('; '))
   });
+  const unexpectedShortPageRisk = assessUnexpectedShortPageRisk({
+    site,
+    pageState,
+    viewport
+  });
+  if (unexpectedShortPageRisk.triggered) {
+    lookFirstHints.push(`unexpected short page risk: ${unexpectedShortPageRisk.reason}`);
+  }
+  const dimmedBackdropGuard = assessDimmedBackdropContinuityGuard({
+    pageState,
+    pngs,
+    visibleScreenshot
+  });
+  assertions.push({
+    name: 'dimmed backdrop continuity guard',
+    passed: dimmedBackdropGuard.passed,
+    detail: dimmedBackdropGuard.skipped ?
+      `skipped: ${dimmedBackdropGuard.reason}` :
+      (dimmedBackdropGuard.passed ?
+        `top ${formatImageAnalysis(dimmedBackdropGuard.top)}; lower ${formatImageAnalysis(dimmedBackdropGuard.lower)}` :
+        dimmedBackdropGuard.issues.join('; '))
+  });
+  if (!dimmedBackdropGuard.passed) {
+    lookFirstHints.push(`dimmed backdrop continuity: ${dimmedBackdropGuard.issues.join('; ')}`);
+  }
   const deepQaVisualGuard = assessDeepQaVisualGuard({
     site,
     pngs,
@@ -1348,8 +1552,14 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
     pageState,
     visibleScreenshot
   });
-  if (!deepQaVisualGuard.passed) {
-    statusHints.push(`deep QA visual guard: ${deepQaVisualGuard.issues.join('; ')}`);
+  const deepQaIssueClassification = classifyDeepQaIssues(deepQaVisualGuard);
+  deepQaVisualGuard.unstableIssues = deepQaIssueClassification.unstableIssues;
+  deepQaVisualGuard.reviewIssues = deepQaIssueClassification.reviewIssues;
+  if (deepQaIssueClassification.unstableIssues.length) {
+    lookFirstHints.push(`deep QA visual guard: ${deepQaIssueClassification.unstableIssues.join('; ')}`);
+  }
+  if (deepQaIssueClassification.reviewIssues.length) {
+    reviewHints.push(`deep QA visual guard: ${deepQaIssueClassification.reviewIssues.join('; ')}`);
   }
   if (appShellReadiness && !appShellReadiness.skipped) {
     assertions.push({
@@ -1362,43 +1572,43 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
   }
   const unsettledScrollFrames = summarizeUnsettledScrollFrames(captureDiagnostics);
   if (unsettledScrollFrames.length) {
-    statusHints.push(`unsettled scroll frames: ${unsettledScrollFrames.slice(0, 5).join('; ')}`);
+    reviewHints.push(`unsettled scroll frames: ${unsettledScrollFrames.slice(0, 5).join('; ')}`);
   }
 
   if (pageState?.blockingModalUncertain || captureBlockingModal?.uncertain) {
-    statusHints.push('uncertain large modal detected; capture continued for manual review');
+    reviewHints.push('uncertain large modal detected; capture continued for manual review');
   }
 
   if (aggregate.width <= 0 || aggregate.height <= 0) {
-    statusHints.push('invalid PNG size');
+    lookFirstHints.push('invalid PNG size');
   }
 
   const capture = captureDiagnostics?.capture;
   if (capture?.status && capture.status !== 'success') {
-    statusHints.push(`capture status ${capture.status}`);
+    lookFirstHints.push(`capture status ${capture.status}`);
   }
 
   if (capture?.failureReason) {
-    statusHints.push(`failure reason ${capture.failureReason}`);
+    lookFirstHints.push(`failure reason ${capture.failureReason}`);
   }
 
   if (capture?.export?.status && capture.export.status !== 'saved') {
-    statusHints.push(`export status ${capture.export.status}`);
+    lookFirstHints.push(`export status ${capture.export.status}`);
   }
 
   const readiness = countImageReadinessIssues(captureDiagnostics);
   if (readiness.pendingImagesWithSource > 2) {
-    statusHints.push(`${readiness.pendingImagesWithSource} pending visible images with source`);
+    lookFirstHints.push(`${readiness.pendingImagesWithSource} pending visible images with source`);
   }
   if (readiness.brokenImages > 2 || readiness.brokenImageRatio > 0.2) {
-    statusHints.push(`${readiness.brokenImages} broken visible images`);
+    lookFirstHints.push(`${readiness.brokenImages} broken visible images`);
   }
   if (
     readiness.placeholderBlocks > 8 &&
     site.targetSegment !== 'app-shell' &&
     (readiness.pendingImagesWithSource > 0 || readiness.readinessRatio < 0.95)
   ) {
-    statusHints.push(`${readiness.placeholderBlocks} placeholder blocks`);
+    lookFirstHints.push(`${readiness.placeholderBlocks} placeholder blocks`);
   }
 
   const failed = assertions.filter(assertion => !assertion.passed);
@@ -1415,6 +1625,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
       contentGuard,
       rightSideGuard,
       blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
       deepQaVisualGuard,
       pageState,
       appShellReadiness,
@@ -1432,6 +1644,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
       contentGuard,
       rightSideGuard,
       blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
       deepQaVisualGuard,
       pageState,
       appShellReadiness,
@@ -1449,6 +1663,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
       contentGuard,
       rightSideGuard,
       blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
       deepQaVisualGuard,
       pageState,
       appShellReadiness,
@@ -1456,7 +1672,7 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
     };
   }
 
-  if (statusHints.length) {
+  if (lookFirstHints.length) {
     return {
       status: 'UNSTABLE SITE',
       assertions,
@@ -1466,10 +1682,31 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
       contentGuard,
       rightSideGuard,
       blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
       deepQaVisualGuard,
       pageState,
       appShellReadiness,
-      reason: statusHints.join(', ')
+      reason: lookFirstHints.join(', ')
+    };
+  }
+
+  if (reviewHints.length) {
+    return {
+      status: 'SAMPLE REVIEW',
+      assertions,
+      visibleScreenshot,
+      widthGuard,
+      firstViewportGuard,
+      contentGuard,
+      rightSideGuard,
+      blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
+      deepQaVisualGuard,
+      pageState,
+      appShellReadiness,
+      reason: reviewHints.join(', ')
     };
   }
 
@@ -1483,6 +1720,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
       contentGuard,
       rightSideGuard,
       blockingModalGuard,
+      unexpectedShortPageRisk,
+      dimmedBackdropGuard,
       deepQaVisualGuard,
       pageState,
       appShellReadiness,
@@ -1499,6 +1738,8 @@ const evaluateResult = async ({site, page, png, pngs, viewport, captureDiagnosti
     contentGuard,
     rightSideGuard,
     blockingModalGuard,
+    unexpectedShortPageRisk,
+    dimmedBackdropGuard,
     deepQaVisualGuard,
     pageState,
     appShellReadiness,
@@ -1544,13 +1785,40 @@ const summarizeStepperFrames = diagnostics => {
     const draw = frame.draw ?
       `, bitmap=${frame.draw.imageWidth}x${frame.draw.imageHeight}, scale=${Number(frame.draw.sourceScaleX).toFixed(3)}x${Number(frame.draw.sourceScaleY).toFixed(3)}` :
       '';
+    const afterCommand = frame.scrollAfterCommand || {};
+    const afterCommandMeta = Number.isFinite(Number(afterCommand.actualY)) &&
+      Number(afterCommand.actualY) !== Number(actual.y || 0) ?
+      `, afterScroll=${afterCommand.actualX || 0},${afterCommand.actualY || 0}` :
+      '';
     const syntheticDim = frame.beforeFrame?.syntheticDimBackdropApplied ? ', syntheticDim=yes' : '';
     const policy = frame.beforeFrame?.capturePolicyApplied ? ', policy=yes' : '';
     const navSuppress = frame.beforeFrame?.suppressVisibleNavOverlay ? ', navSuppress=yes' : '';
+    const scrollState = frame.scrollDiagnostics || {};
+    const maxY = scrollState.maxY ?? actual.maxY;
+    const targetType = scrollState.targetType || actual.targetType;
+    const scrollMeta = targetType || maxY !== undefined ?
+      `, target=${targetType || 'n/a'}, maxY=${maxY ?? 'n/a'}, atMaxY=${(scrollState.atMaxY ?? actual.atMaxY) ? 'yes' : 'no'}, settledAtEnd=${scrollState.settledAtScrollEnd ? 'yes' : 'no'}` :
+      '';
+    const timing = frame.timing?.totalMs ?
+      `, frameMs=${Math.round(frame.timing.totalMs)}` :
+      '';
 
-    return `frame ${frame.frameIndex}: hidden=${frame.beforeFrame?.hidden || 0}, transformed=${frame.beforeFrame?.transformed || 0}${syntheticDim}${policy}${navSuppress}, planned=${planned.x || 0},${planned.y || 0}, actual=${actual.x || 0},${actual.y || 0}, settled=${frame.scrollSettled === false ? 'no' : 'yes'}${draw}`;
+    return `frame ${frame.frameIndex}: hidden=${frame.beforeFrame?.hidden || 0}, transformed=${frame.beforeFrame?.transformed || 0}${syntheticDim}${policy}${navSuppress}, planned=${planned.x || 0},${planned.y || 0}, actual=${actual.x || 0},${actual.y || 0}${afterCommandMeta}${scrollMeta}, settled=${frame.scrollSettled === false ? 'no' : 'yes'}${timing}${draw}`;
   });
 };
+
+const formatTimingMs = value => {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number)}ms` : 'n/a';
+};
+
+const formatTimingPhases = phases => Object.entries(phases || {})
+  .map(([name, value]) => ({
+    name,
+    elapsedMs: Number(value?.elapsedMs) || 0,
+    value
+  }))
+  .sort((a, b) => b.elapsedMs - a.elapsedMs || a.name.localeCompare(b.name));
 
 const writeCaseReport = async ({caseDir, result}) => {
   const lines = [
@@ -1564,6 +1832,7 @@ const writeCaseReport = async ({caseDir, result}) => {
     `- Scenario: ${result.scenario || 'n/a'}`,
     `- Verify: ${result.verify || 'n/a'}`,
     `- Reason: ${result.reason || 'n/a'}`,
+    ...(result.preScrollY ? [`- Pre-scroll Y: ${result.preScrollY}px`] : []),
     `- Navigation attempts: ${result.navigationAttempts || 'n/a'}`,
     `- Actual viewport: ${result.viewport ? `${result.viewport.width}x${result.viewport.height}` : 'n/a'}`,
     `- Extension PNG: ${result.extensionPng ? path.basename(result.extensionPng) : 'n/a'}`,
@@ -1675,9 +1944,44 @@ const writeCaseReport = async ({caseDir, result}) => {
     lines.push('');
   }
 
+  if (result.unexpectedShortPageRisk) {
+    lines.push('## Unexpected Short Page Risk', '');
+    lines.push(`- Status: ${result.unexpectedShortPageRisk.triggered ? 'WARN' : 'PASS'}`);
+    if (result.unexpectedShortPageRisk.skipped) {
+      lines.push(`- Skipped: ${result.unexpectedShortPageRisk.reason}`);
+    }
+    else {
+      lines.push(`- Reason: ${result.unexpectedShortPageRisk.reason}`);
+      lines.push(`- Document height: ${result.unexpectedShortPageRisk.documentHeight || 'n/a'}`);
+      lines.push(`- Viewport height: ${result.unexpectedShortPageRisk.viewportHeight || 'n/a'}`);
+      lines.push(`- Window scrollHeight delta: ${result.unexpectedShortPageRisk.windowScrollHeight ?? 'n/a'}`);
+      lines.push(`- Short-page threshold: ${result.unexpectedShortPageRisk.shortDocumentThreshold || 'n/a'}`);
+      lines.push(`- High-confidence internal target: ${result.unexpectedShortPageRisk.highConfidenceInternalTarget ? 'yes' : 'no'}`);
+    }
+    lines.push('');
+  }
+
+  if (result.dimmedBackdropGuard) {
+    lines.push('## Dimmed Backdrop Continuity Guard', '');
+    lines.push(`- Status: ${result.dimmedBackdropGuard.passed ? 'PASS' : 'FAIL'}`);
+    if (result.dimmedBackdropGuard.skipped) {
+      lines.push(`- Skipped: ${result.dimmedBackdropGuard.reason}`);
+    }
+    else {
+      lines.push(`- Top viewport: ${formatImageAnalysis(result.dimmedBackdropGuard.top)}`);
+      lines.push(`- Lower capture: ${formatImageAnalysis(result.dimmedBackdropGuard.lower)}`);
+      if (result.dimmedBackdropGuard.issues?.length) {
+        lines.push(`- Issues: ${result.dimmedBackdropGuard.issues.join('; ')}`);
+      }
+    }
+    lines.push('');
+  }
+
   if (result.deepQaVisualGuard) {
+    const hasUnstableIssues = Boolean(result.deepQaVisualGuard.unstableIssues?.length);
+    const hasReviewIssues = Boolean(result.deepQaVisualGuard.reviewIssues?.length);
     lines.push('## Deep QA Visual Guard', '');
-    lines.push(`- Status: ${result.deepQaVisualGuard.passed ? 'PASS' : 'UNSTABLE'}`);
+    lines.push(`- Status: ${result.deepQaVisualGuard.passed ? 'PASS' : (hasUnstableIssues ? 'UNSTABLE' : 'REVIEW')}`);
     if (result.deepQaVisualGuard.skipped) {
       lines.push(`- Skipped: ${result.deepQaVisualGuard.reason}`);
     }
@@ -1687,6 +1991,12 @@ const writeCaseReport = async ({caseDir, result}) => {
     }
     if (result.deepQaVisualGuard.issues?.length) {
       lines.push(`- Issues: ${result.deepQaVisualGuard.issues.join('; ')}`);
+    }
+    if (hasUnstableIssues) {
+      lines.push(`- Look-first issues: ${result.deepQaVisualGuard.unstableIssues.join('; ')}`);
+    }
+    if (hasReviewIssues) {
+      lines.push(`- Review-only issues: ${result.deepQaVisualGuard.reviewIssues.join('; ')}`);
     }
     lines.push('');
   }
@@ -1729,8 +2039,9 @@ const writeCaseReport = async ({caseDir, result}) => {
         lines.push(`  - ${candidate.kind}: ${candidate.tagName}${candidate.id ? `#${candidate.id}` : ''} position=${candidate.position || 'n/a'} area=${candidate.areaRatio} rect=${candidate.rect?.left || 0},${candidate.rect?.top || 0},${candidate.rect?.width || 0}x${candidate.rect?.height || 0}`);
       }
       lines.push(`- Scroll-container candidates: ${result.pageState.scrollContainerCandidates?.length || 0}`);
+      lines.push(`- Window scrollHeight delta: ${result.pageState.windowScrollHeight ?? 'n/a'}`);
       for (const candidate of result.pageState.scrollContainerCandidates || []) {
-        lines.push(`  - ${candidate.kind}: ${candidate.tagName}${candidate.id ? `#${candidate.id}` : ''} role=${candidate.role || 'n/a'} links=${candidate.linkCount || 0} words=${candidate.wordCount || 0} rect=${candidate.rect?.left || 0},${candidate.rect?.top || 0},${candidate.rect?.width || 0}x${candidate.rect?.height || 0} scroll=${candidate.clientHeight || 0}/${candidate.scrollHeight || 0}`);
+        lines.push(`  - ${candidate.kind}: ${candidate.tagName}${candidate.id ? `#${candidate.id}` : ''} role=${candidate.role || 'n/a'} position=${candidate.position || 'n/a'} fixedAncestor=${candidate.hasFixedAncestor ? 'yes' : 'no'} stickyAncestor=${candidate.hasStickyAncestor ? 'yes' : 'no'} links=${candidate.linkCount || 0} words=${candidate.wordCount || 0} rect=${candidate.rect?.left || 0},${candidate.rect?.top || 0},${candidate.rect?.width || 0}x${candidate.rect?.height || 0} scroll=${candidate.clientHeight || 0}/${candidate.scrollHeight || 0}`);
       }
     }
     lines.push('');
@@ -1757,13 +2068,101 @@ const writeCaseReport = async ({caseDir, result}) => {
       if (capture.scrollTarget?.diagnostics) {
         lines.push(`- Risk flags: ${(capture.scrollTarget.diagnostics.riskFlags || []).join(', ') || 'none'}`);
         lines.push(`- Fixed/sticky probe candidates: ${capture.scrollTarget.diagnostics.fixedStickyCandidateCount || 0}`);
-        lines.push(`- Visible nav overlay probe candidates: ${capture.scrollTarget.diagnostics.visibleNavOverlayCandidateCount || 0}`);
+        lines.push(`- Visible overlay probe candidates: ${capture.scrollTarget.diagnostics.visibleOverlayCandidateCount || 0}`);
+        lines.push(`- Internal scroll candidates: ${capture.scrollTarget.diagnostics.internalScrollCandidateCount || 0}`);
+        lines.push(`- Window scrollHeight delta: ${capture.scrollTarget.diagnostics.windowScrollHeight ?? 'n/a'}`);
+        const blockingModal = capture.scrollTarget.diagnostics.blockingModal;
+        if (blockingModal) {
+          const decision = blockingModal.modalDecision || {};
+          const sources = (blockingModal.scrollLockSources || decision.scrollLockSources || []).join(', ') || 'none';
+          lines.push(`- Blocking modal decision: action=${blockingModal.captureAction || 'n/a'}, reason=${blockingModal.reason || 'n/a'}, atTop=${decision.atPageTop ? 'yes' : 'no'}, scrollY=${decision.scrollY ?? 'n/a'}, windowScrollableY=${decision.windowScrollableY ?? 'n/a'}, scrollLockSources=${sources}`);
+          for (const candidate of blockingModal.modalCandidates || []) {
+            const rect = candidate.rect || {};
+            lines.push(`  - modal candidate: ${candidate.descriptor || candidate.tag || 'n/a'} role=${candidate.role || 'n/a'} ariaModal=${candidate.ariaModal || 'n/a'} position=${candidate.position || 'n/a'} covers=${candidate.coversViewport ? 'yes' : 'no'} entryGate=${candidate.entryGate ? 'yes' : 'no'} area=${candidate.areaRatio ?? 'n/a'} rect=${rect.left || 0},${rect.top || 0},${rect.width || 0}x${rect.height || 0}`);
+          }
+        }
+        const splitSummary = capture.scrollTarget.diagnostics.splitExclusionSummary;
+        if (splitSummary) {
+          const byReason = Object.entries(splitSummary.byReason || {})
+            .map(([reason, count]) => `${reason}:${count}`)
+            .join(', ') || 'none';
+          lines.push(`- Split exclusion ranges: count=${splitSummary.count || 0}, maxHeight=${splitSummary.maxHeight || 0}, byReason=${byReason}`);
+        }
+        const geometryAvoidRanges = capture.scrollTarget.diagnostics.geometryAvoidRangeDiagnostics;
+        if (geometryAvoidRanges) {
+          lines.push(`- Geometry avoid ranges: scanned=${geometryAvoidRanges.scanned || 0}, cardAdded=${geometryAvoidRanges.cardAdded || 0}, gridRowAdded=${geometryAvoidRanges.gridRowAdded || 0}, elapsedMs=${geometryAvoidRanges.elapsedMs ?? 'n/a'}`);
+        }
+        if (capture.scrollTarget.diagnostics.splitLayoutRisk) {
+          lines.push(`- Split layout risk: yes, reason=${capture.scrollTarget.diagnostics.splitLayoutRiskReason || 'n/a'}, shortColumn=${capture.scrollTarget.diagnostics.shortColumnSide || 'n/a'}, heightRatio=${capture.scrollTarget.diagnostics.heightRatio || capture.scrollTarget.diagnostics.tallColumnRatio || 'n/a'}, stickyLike=${capture.scrollTarget.diagnostics.stickyLikeDetected ? 'yes' : 'no'}`);
+        }
+        const selectedScrollCandidate = capture.scrollTarget.diagnostics.selectedScrollCandidate;
+        if (selectedScrollCandidate) {
+          const rect = selectedScrollCandidate.rect || {};
+          lines.push(`- Selected scroll candidate: ${selectedScrollCandidate.descriptor || 'n/a'} position=${selectedScrollCandidate.position || 'n/a'} fixedAncestor=${selectedScrollCandidate.hasFixedAncestor ? 'yes' : 'no'} stickyAncestor=${selectedScrollCandidate.hasStickyAncestor ? 'yes' : 'no'} rect=${rect.left || 0},${rect.top || 0},${rect.width || 0}x${rect.height || 0} scroll=${selectedScrollCandidate.clientHeight || 0}/${selectedScrollCandidate.scrollHeight || 0}`);
+        }
+      }
+      const stickyNormalization = result.captureDiagnostics.diagnostics?.stickyNormalization?.active ||
+        result.captureDiagnostics.diagnostics?.stickyNormalization?.afterWarmup ||
+        result.captureDiagnostics.diagnostics?.stickyNormalization?.beforeWarmup;
+      if (stickyNormalization) {
+        lines.push(`- Sticky normalization: applied=${stickyNormalization.applied ? 'yes' : 'no'}, normalized=${stickyNormalization.normalized || 0}, frames=${stickyNormalization.framesWithNormalizedSticky || 0}/${stickyNormalization.frameCount || 0}, shadowRoots=${stickyNormalization.shadowRootCount || 0}, reasons=${(stickyNormalization.reasons || [stickyNormalization.reason]).filter(Boolean).join(', ') || 'none'}`);
+      }
+      const repeatedChrome = capture.repeatedChromeSummary ||
+        result.captureDiagnostics.diagnostics?.stepper?.repeatedChrome;
+      if (repeatedChrome) {
+        lines.push(`- Repeated chrome: candidates=${repeatedChrome.candidateCount || 0}, repeated=${repeatedChrome.repeatedCount || 0}, reasons=${(repeatedChrome.reasons || []).join(', ') || 'none'}`);
+      }
+      const cleanup = result.captureDiagnostics.diagnostics?.cleanup?.content;
+      if (cleanup) {
+        lines.push(`- Cleanup sticky markers: before=${cleanup.beforeRestore?.stickyMarkers || 0}, after=${cleanup.afterRestore?.stickyMarkers || 0}`);
+        lines.push(`- Cleanup sticky rules: before=${cleanup.beforeRestore?.stickyNormalizationRules || 0}, after=${cleanup.afterRestore?.stickyNormalizationRules || 0}`);
       }
       lines.push(`- Single-file decision: ${capture.singleFileExportAttempt?.decision || 'n/a'}`);
       lines.push(`- Export status: ${capture.export?.status || 'n/a'}`);
       lines.push(`- Export files: ${capture.export?.files?.length || 0}`);
+      if (capture.export?.files?.length) {
+        for (const file of capture.export.files) {
+          const lifecycle = file.lifecycle || {};
+          lines.push(`  - part ${file.part || '?'}: downloadId=${file.downloadId || 'n/a'}, wait=${lifecycle.waitStatus || 'n/a'}, started=${lifecycle.startedAt || 'n/a'}, completed=${lifecycle.completedAt || 'n/a'}, filename=${file.filename || 'n/a'}`);
+        }
+      }
       if (capture.export?.errors?.length) {
         lines.push(`- Export errors: ${capture.export.errors.join('; ')}`);
+      }
+      if (capture.timing) {
+        lines.push(`- Total elapsed: ${formatTimingMs(capture.timing.totalMs)}`);
+      }
+      lines.push('');
+    }
+
+    const captureTiming = result.captureDiagnostics.capture?.timing;
+    const stepperTiming = result.captureDiagnostics.diagnostics?.stepper?.timing;
+    if (captureTiming || stepperTiming) {
+      lines.push('## Timing Diagnostics', '');
+      if (captureTiming) {
+        lines.push(`- Capture total: ${formatTimingMs(captureTiming.totalMs)}`);
+        const phases = formatTimingPhases(captureTiming.phases);
+        if (phases.length) {
+          lines.push('- Slowest capture phases:');
+          for (const phase of phases.slice(0, 12)) {
+            const extras = Object.entries(phase.value || {})
+              .filter(([key]) => key !== 'elapsedMs')
+              .map(([key, value]) => `${key}=${value}`)
+              .join(', ');
+            lines.push(`  - ${phase.name}: ${formatTimingMs(phase.elapsedMs)}${extras ? ` (${extras})` : ''}`);
+          }
+        }
+      }
+      if (stepperTiming) {
+        lines.push(`- Stepper total: ${formatTimingMs(stepperTiming.totalMs)} across ${stepperTiming.frameCount || 0} frame(s)`);
+        const totals = Object.entries(stepperTiming.totals || {})
+          .sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0));
+        if (totals.length) {
+          lines.push('- Stepper phase totals:');
+          for (const [name, value] of totals.slice(0, 12)) {
+            lines.push(`  - ${name}: ${formatTimingMs(value)}`);
+          }
+        }
       }
       lines.push('');
     }
@@ -2014,6 +2413,11 @@ const runSite = async ({site, viewport}) => {
     const navigation = await gotoWithRetry({page, site});
     result.navigationAttempts = navigation.attempts;
     await page.waitForTimeout(site.settleMs || 1200);
+    if (preScrollY > 0) {
+      await page.evaluate(y => window.scrollTo(0, y), preScrollY);
+      await page.waitForTimeout(300);
+      result.preScrollY = preScrollY;
+    }
     const appShellReadiness = await waitForAppShellLoadedState({page, site});
     const actualViewport = await readActualViewport(page);
     const pageState = await inspectPreCapturePageState(page);
