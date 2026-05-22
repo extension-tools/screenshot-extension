@@ -96,6 +96,7 @@ Screenshot Extension is a Chrome MV3 extension for one-click full-page capture f
 ## Source Of Truth Files
 
 - `project/docs/capture-risk-policy.md`: runtime engine policies and `riskFlags`.
+- `project/docs/worktree-cleanup-handoff.md`: latest Git/worktree cleanup state and next commit order.
 - `project/tests/qa-runbook.md`: QA commands, publishing, statuses.
 - `project/tests/real-site-findings.md`: durable real-site conclusions and compressed historical QA log.
 - `project/docs/beta-stability.md`: release gate criteria.
