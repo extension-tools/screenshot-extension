@@ -173,6 +173,10 @@
           "split-boundary-text",
           "missing-content"
         ]
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/apple-iphone.png",
+        "usage": "Use before closing Apple iPhone split-boundary heading/subcopy and lower directory missing-content regressions."
       }
     },
     {
@@ -195,6 +199,15 @@
           "split-boundary-text",
           "missing-content"
         ]
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/apple-macbook-air-part-01.png",
+        "files": [
+          "project/tests/golden-baselines/real-sites/apple-macbook-air-part-01.png",
+          "project/tests/golden-baselines/real-sites/apple-macbook-air-part-02.png",
+          "project/tests/golden-baselines/real-sites/apple-macbook-air-part-03.png"
+        ],
+        "usage": "Use before closing Apple MacBook Air missing middle values-card, long section completeness, and split-boundary regressions."
       }
     },
     {
@@ -1506,6 +1519,10 @@
       "expect": {
         "heightGreaterThanViewport": true,
         "widthAtLeastViewport": true
+      },
+      "goldenBaseline": {
+        "file": "project/tests/golden-baselines/real-sites/allbirds-wool-runners.png",
+        "usage": "Use before closing Allbirds footer-link completeness, product-section population, and sticky product/navigation regressions."
       }
     },
     {

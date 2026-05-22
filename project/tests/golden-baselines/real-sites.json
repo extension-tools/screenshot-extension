@@ -9,6 +9,80 @@
   ],
   "baselines": [
     {
+      "name": "Allbirds Wool Runners",
+      "url": "https://www.allbirds.com/products/mens-wool-runners",
+      "file": "real-sites/allbirds-wool-runners.png",
+      "sourceFile": "/Users/dima/Desktop/Golden baselines /screencapture-allbirds-products-mens-wool-runners-2026-05-18-05_06_32.png",
+      "capturedAtLocal": "2026-05-18 05:06:32",
+      "pixelSize": {
+        "width": 3404,
+        "height": 20104
+      },
+      "guards": [
+        "product page sections and footer links remain populated",
+        "footer Company/Information links are present",
+        "sticky product/navigation surfaces do not repeat"
+      ]
+    },
+    {
+      "name": "Apple iPhone",
+      "url": "https://www.apple.com/iphone/",
+      "file": "real-sites/apple-iphone.png",
+      "sourceFile": "/Users/dima/Desktop/Golden baselines /screencapture-apple-iphone-2026-05-18-05_11_56.png",
+      "capturedAtLocal": "2026-05-18 05:11:56",
+      "pixelSize": {
+        "width": 3404,
+        "height": 26662
+      },
+      "guards": [
+        "Why Apple is the best heading and subcopy are not clipped",
+        "lower iPhone directory columns are populated",
+        "Apple product sections remain complete without blank lazy blocks"
+      ]
+    },
+    {
+      "name": "Apple MacBook Air",
+      "url": "https://www.apple.com/macbook-air/",
+      "file": "real-sites/apple-macbook-air-part-01.png",
+      "files": [
+        "real-sites/apple-macbook-air-part-01.png",
+        "real-sites/apple-macbook-air-part-02.png",
+        "real-sites/apple-macbook-air-part-03.png"
+      ],
+      "sourceFiles": [
+        "/Users/dima/Desktop/Golden baselines /screencapture-apple-macbook-air-2026-05-18-05_31_10.png",
+        "/Users/dima/Desktop/Golden baselines /screencapture-apple-macbook-air-2026-05-18-05_31_10-2.png",
+        "/Users/dima/Desktop/Golden baselines /screencapture-apple-macbook-air-2026-05-18-05_31_10-3.png"
+      ],
+      "capturedAtLocal": "2026-05-18 05:31:10",
+      "pixelSize": {
+        "width": 2752,
+        "height": 28800
+      },
+      "pixelParts": [
+        {
+          "file": "real-sites/apple-macbook-air-part-01.png",
+          "width": 2752,
+          "height": 28800
+        },
+        {
+          "file": "real-sites/apple-macbook-air-part-02.png",
+          "width": 2752,
+          "height": 28800
+        },
+        {
+          "file": "real-sites/apple-macbook-air-part-03.png",
+          "width": 2752,
+          "height": 4658
+        }
+      ],
+      "guards": [
+        "Our values lead the way section keeps all three cards including the middle Privacy card",
+        "long Apple product sections remain populated",
+        "section headings and cards are not clipped at output boundaries"
+      ]
+    },
+    {
       "name": "Cloudflare Blog",
       "url": "https://blog.cloudflare.com/",
       "file": "real-sites/cloudflare-blog.png",
