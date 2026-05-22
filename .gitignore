@@ -24,6 +24,7 @@ project/tests/targeted-*.md
 # Keep the Markdown source of truth in Git instead.
 project/docs/*.pdf
 project/specs/*.pdf
+project/product-tasks/*.pdf
 
 # Local saved real-site HTML dumps for investigation.
 # Keep these out of Git; promote small reusable fixtures separately.
