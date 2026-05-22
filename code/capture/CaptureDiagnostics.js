@@ -23,8 +23,14 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
       page: null,
       output: null,
       scrollTarget: null,
+      timing: {
+        startedAtEpochMs: Date.now(),
+        totalMs: null,
+        phases: {}
+      },
       singleFileExportAttempt: null,
       imageReadinessSummary: null,
+      repeatedChromeSummary: null,
       export: {
         status: 'not_started',
         files: [],
@@ -34,6 +40,34 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
       errorMessage: null,
       completedAt: null
     };
+  }
+
+  recordTiming(diagnostics, name, elapsedMs, extra = {}) {
+    if (!diagnostics || !name) {
+      return;
+    }
+
+    diagnostics.timing = diagnostics.timing || {
+      startedAtEpochMs: Date.now(),
+      totalMs: null,
+      phases: {}
+    };
+    diagnostics.timing.phases = diagnostics.timing.phases || {};
+    diagnostics.timing.phases[name] = {
+      elapsedMs: Math.max(0, Math.round(Number(elapsedMs) || 0)),
+      ...extra
+    };
+  }
+
+  finishTiming(diagnostics) {
+    if (!diagnostics?.timing) {
+      return;
+    }
+
+    diagnostics.timing.totalMs = Math.max(
+      0,
+      Math.round(Date.now() - (Number(diagnostics.timing.startedAtEpochMs) || Date.now()))
+    );
   }
 
   attachPage(diagnostics, page, stage) {
@@ -68,6 +102,11 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
       capturePolicy: page.capturePolicy || page.diagnostics?.capturePolicy || null,
       captureArea: page.captureArea || null
     };
+    diagnostics.capturePlan = page.capturePlan ? {
+      version: page.capturePlan.version,
+      avoidRangeCount: page.capturePlan.avoidRanges?.length || 0,
+      splitCount: page.capturePlan.splits?.length || 0
+    } : null;
   }
 
   attachStrategy(diagnostics, strategy, page) {
@@ -110,6 +149,8 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
       frameCount: frameReadiness.length,
       worstFrame
     };
+    diagnostics.stickyNormalizationSummary = legacyDiagnostics.stickyNormalization || null;
+    diagnostics.repeatedChromeSummary = legacyDiagnostics.stepper?.repeatedChrome || null;
   }
 
   attachExportStatus(diagnostics, status) {
@@ -119,6 +160,7 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
   markSuccess(diagnostics) {
     diagnostics.status = 'success';
     diagnostics.completedAt = new Date().toISOString();
+    this.finishTiming(diagnostics);
   }
 
   markFailure(diagnostics, error) {
@@ -126,6 +168,7 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
     diagnostics.failureReason = this.classifyFailure(error);
     diagnostics.errorMessage = error?.message || String(error);
     diagnostics.completedAt = new Date().toISOString();
+    this.finishTiming(diagnostics);
 
     if (diagnostics.export?.status === 'not_started') {
       diagnostics.export.status = 'not_started';
@@ -163,6 +206,10 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
 
     if (message.includes('scroll target did not move')) {
       return 'scroll_target_stuck';
+    }
+
+    if (message.includes('pageprobe')) {
+      return 'page_probe_failed';
     }
 
     if (message.includes('download')) {

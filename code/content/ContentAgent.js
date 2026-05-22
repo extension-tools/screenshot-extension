@@ -21,7 +21,11 @@
       this.fixedStickyNormalizer = new globalThis.ScreenshotExtensionFixedStickyNormalizer({
         stack: this.stack
       });
-      const stability = this.prepareStabilityNormalization();
+      const stability = this.prepareStabilityNormalization({
+        preserveFixedBackground: Boolean(this.capturePolicy?.quirks?.preserveFixedBackground),
+        fixedBackgroundAttribute: this.capturePolicy?.quirks?.fixedBackgroundAttribute ||
+          'data-screenshot-extension-quirk-fixed-background'
+      });
       const scrollbar = this.scrollbarNormalizer.prepare();
 
       return {
@@ -32,11 +36,40 @@
       };
     }
 
-    prepareStabilityNormalization() {
+    normalizeStickyForCapture(options = {}) {
+      if (!this.stack || !this.fixedStickyNormalizer) {
+        return {
+          applied: false,
+          normalized: 0,
+          reason: 'missing-prepare'
+        };
+      }
+
+      if (options.capturePolicy) {
+        this.capturePolicy = options.capturePolicy;
+      }
+
+      const stickyNormalization = this.fixedStickyNormalizer.prepareStickyNormalization({
+        capturePolicy: this.capturePolicy
+      });
+
+      return {
+        stickyNormalization,
+        mutations: this.stack.count()
+      };
+    }
+
+    prepareStabilityNormalization(options = {}) {
       if (!document.documentElement) {
         return {applied: false};
       }
 
+      const preserveFixedBackground = Boolean(options.preserveFixedBackground);
+      const fixedBackgroundAttribute = options.fixedBackgroundAttribute ||
+        'data-screenshot-extension-quirk-fixed-background';
+      const backgroundAttachmentSelector = preserveFixedBackground ?
+        `*:not([${fixedBackgroundAttribute}]),\n        *:not([${fixedBackgroundAttribute}])::before,\n        *:not([${fixedBackgroundAttribute}])::after` :
+        '*,\n        *::before,\n        *::after';
       const style = document.createElement('style');
       style.setAttribute('data-screenshot-extension-stability', 'true');
       style.textContent = `
@@ -52,12 +85,19 @@
           transition-property: none !important;
           transition-duration: 0s !important;
           transition-delay: 0s !important;
+        }
+
+        ${backgroundAttachmentSelector} {
           background-attachment: scroll !important;
         }
       `;
 
       this.stack.appendNode(document.head || document.documentElement, style);
-      return {applied: true};
+      return {
+        applied: true,
+        preserveFixedBackground,
+        fixedBackgroundAttribute
+      };
     }
 
     beforeFrame(options = {}) {
@@ -300,9 +340,11 @@
     }
 
     cleanupCapture() {
+      const beforeRestore = this.collectCleanupState();
       if (this.stack) {
         this.stack.restoreAll();
       }
+      const afterRestore = this.collectCleanupState();
 
       this.stack = null;
       this.captureId = null;
@@ -311,8 +353,57 @@
       this.scrollbarNormalizer = null;
 
       return {
-        restored: true
+        restored: true,
+        beforeRestore,
+        afterRestore
       };
+    }
+
+    collectCleanupState() {
+      if (!document.documentElement) {
+        return {
+          stickyMarkers: 0,
+          stickyNormalizationRules: 0
+        };
+      }
+
+      const roots = [document];
+      for (const element of this.collectCleanupElements(document.body)) {
+        if (element.shadowRoot) {
+          roots.push(element.shadowRoot);
+        }
+      }
+
+      return {
+        stickyMarkers: roots.reduce((total, root) =>
+          total + root.querySelectorAll('[data-screenshot-extension-sticky-normalized]').length, 0),
+        stickyNormalizationRules: roots.reduce((total, root) =>
+          total + root.querySelectorAll('[data-screenshot-extension-sticky-normalization]').length, 0)
+      };
+    }
+
+    collectCleanupElements(root) {
+      if (!root || !root.querySelectorAll) {
+        return [];
+      }
+
+      const elements = [];
+      const stack = [root];
+      while (stack.length) {
+        const current = stack.pop();
+        if (!current?.querySelectorAll) {
+          continue;
+        }
+
+        for (const element of current.querySelectorAll('*')) {
+          elements.push(element);
+          if (element.shadowRoot) {
+            stack.push(element.shadowRoot);
+          }
+        }
+      }
+
+      return elements;
     }
   }
 

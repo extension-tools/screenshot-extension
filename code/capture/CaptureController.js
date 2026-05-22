@@ -5,6 +5,7 @@ self.CaptureController = class CaptureController {
     this.guard = new self.CapabilityGuard({chrome});
     this.captureDiagnostics = new self.CaptureDiagnostics();
     this.pageProbe = new self.PageProbe({chrome});
+    this.quirks = new self.QuirksLayer({chrome});
     this.contentAgent = new self.ContentAgentClient({chrome});
     this.canvasSizeGuard = new self.CanvasSizeGuard();
     this.singleFileExportAttempt = new self.SingleFileExportAttempt();
@@ -50,14 +51,38 @@ self.CaptureController = class CaptureController {
     let stitcher;
     let strategy;
     let largePageNoticeShown = false;
+    let quirks = null;
+    let postWarmupQuirks = null;
     const diagnostics = {
-      imageReadiness: {}
+      imageReadiness: {},
+      quirks: {}
     };
     const diagnosticsV2 = this.captureDiagnostics.create({tab, prefs});
+    const timePhase = async (name, action, extra = {}) => {
+      const started = Date.now();
+      try {
+        return await action();
+      }
+      finally {
+        this.captureDiagnostics.recordTiming(diagnosticsV2, name, Date.now() - started, extra);
+      }
+    };
+    const timePhaseSync = (name, action, extra = {}) => {
+      const started = Date.now();
+      try {
+        return action();
+      }
+      finally {
+        this.captureDiagnostics.recordTiming(diagnosticsV2, name, Date.now() - started, extra);
+      }
+    };
 
     try {
-      this.guard.assertCanCapture(tab);
-      page = await this.pageProbe.measure(tab.id);
+      timePhaseSync('capability_guard', () => this.guard.assertCanCapture(tab));
+      quirks = await timePhase('quirks_before_measure', () => this.quirks.beforeMeasure(tab.id).catch(() => null));
+      diagnostics.quirks.beforeMeasure = quirks;
+      page = await timePhase('page_probe_initial', () => this.pageProbe.measure(tab.id, quirks));
+      this.assertMeasuredPage(page, 'initial');
       capturePolicy = page.capturePolicy || page.diagnostics?.capturePolicy || null;
       originalPage = page;
       this.captureDiagnostics.attachPage(diagnosticsV2, page, 'initial');
@@ -67,14 +92,20 @@ self.CaptureController = class CaptureController {
         largePageNoticeShown
       );
 
-      await this.contentAgent.prepare(tab.id, {
+      await timePhase('content_prepare', () => this.contentAgent.prepare(tab.id, {
         captureId: String(Date.now()),
         capturePolicy
-      });
-      diagnostics.imageReadiness.beforeWarmup = await this.contentAgent.collectImageReadiness(tab.id).catch(() => null);
+      }));
+      diagnostics.imageReadiness.beforeWarmup = await timePhase(
+        'image_readiness_before_warmup',
+        () => this.contentAgent.collectImageReadiness(tab.id).catch(() => null)
+      );
 
       const planner = new self.PositionPlanner({offset: prefs.offset});
-      let plan = planner.createPlan(page);
+      let plan = timePhaseSync('position_plan_initial', () => planner.createPlan(page));
+      if (diagnosticsV2.timing?.phases?.position_plan_initial) {
+        diagnosticsV2.timing.phases.position_plan_initial.positions = plan.positions.length;
+      }
       const warmupPrefs = capturePolicy?.skipLazyWarmupBeforeFirstFrame ?
         {
           ...prefs,
@@ -82,29 +113,94 @@ self.CaptureController = class CaptureController {
           lazyWarmupSkipReason: 'capture-policy-preserve-first-frame'
         } :
         prefs;
-      diagnostics.lazyWarmup = await this.lazyLoadWarmer.warm({tab, page, plan, prefs: warmupPrefs});
-      page = await this.pageProbe.measure(tab.id);
+      diagnostics.lazyWarmup = await timePhase(
+        'lazy_warmup',
+        () => this.lazyLoadWarmer.warm({tab, page, plan, prefs: warmupPrefs})
+      );
+      postWarmupQuirks = await timePhase(
+        'quirks_after_warmup',
+        () => this.quirks.afterWarmup(tab.id).catch(() => null)
+      );
+      diagnostics.quirks.afterWarmup = postWarmupQuirks;
+      page = await timePhase('page_probe_post_warmup', () => this.pageProbe.measure(tab.id, postWarmupQuirks || quirks));
+      this.assertMeasuredPage(page, 'post-warmup');
       capturePolicy = this.mergeCapturePolicies(capturePolicy, page.capturePolicy || page.diagnostics?.capturePolicy || null);
       page = {
         ...page,
         capturePolicy,
         diagnostics: {
-          ...(page.diagnostics || {}),
+          ...this.mergePageRiskDiagnostics(originalPage?.diagnostics, page.diagnostics),
           capturePolicy
         }
       };
       this.captureDiagnostics.attachPage(diagnosticsV2, page, 'post-warmup');
-      await this.contentAgent.prepare(tab.id, {
-        captureId: String(Date.now()),
-        capturePolicy
-      });
-      diagnostics.imageReadiness.afterWarmup = await this.contentAgent.collectImageReadiness(tab.id).catch(() => null);
-      strategy = this.canvasSizeGuard.createStrategy(page);
+      diagnostics.imageReadiness.afterWarmup = await timePhase(
+        'image_readiness_after_warmup',
+        () => this.contentAgent.collectImageReadiness(tab.id).catch(() => null)
+      );
+      plan = timePhaseSync('position_plan_post_warmup', () => planner.createPlan(page));
+      if (diagnosticsV2.timing?.phases?.position_plan_post_warmup) {
+        diagnosticsV2.timing.phases.position_plan_post_warmup.positions = plan.positions.length;
+      }
+      const viewportBlockingFallback = await timePhase(
+        'viewport_blocking_fallback_probe',
+        () => this.probeViewportBlockingFallback(tab, page, plan, capturePolicy, prefs)
+      );
+      diagnostics.viewportBlockingFallback = viewportBlockingFallback;
+      diagnosticsV2.viewportBlockingFallback = viewportBlockingFallback;
+
+      if (viewportBlockingFallback.triggered) {
+        capturePolicy = {
+          ...capturePolicy,
+          mode: 'viewport-only',
+          reasons: [
+            ...new Set([
+              ...(Array.isArray(capturePolicy?.reasons) ? capturePolicy.reasons : []),
+              viewportBlockingFallback.reason
+            ])
+          ],
+          viewportBlockingFallback
+        };
+        page = {
+          ...page,
+          height: page.h,
+          scrollHeight: page.h,
+          scrollPlanWidth: page.w,
+          scrollPlanHeight: page.h,
+          scrollPlanViewportWidth: page.w,
+          scrollPlanViewportHeight: page.h,
+          splitCandidates: [],
+          splitExclusionRanges: [],
+          capturePlan: null,
+          capturePolicy,
+          diagnostics: {
+            ...(page.diagnostics || {}),
+            capturePolicy,
+            viewportBlockingFallback
+          }
+        };
+        this.captureDiagnostics.attachPage(diagnosticsV2, page, 'viewport-fallback');
+        plan = timePhaseSync('position_plan_viewport_fallback', () => planner.createPlan(page));
+        if (diagnosticsV2.timing?.phases?.position_plan_viewport_fallback) {
+          diagnosticsV2.timing.phases.position_plan_viewport_fallback.positions = plan.positions.length;
+        }
+      }
+
+      strategy = timePhaseSync('canvas_strategy', () => this.canvasSizeGuard.createStrategy(page));
       this.captureDiagnostics.attachStrategy(diagnosticsV2, strategy, page);
-      diagnostics.singleFileExportAttempt = this.singleFileExportAttempt.evaluate({strategy, prefs});
+      diagnostics.singleFileExportAttempt = timePhaseSync(
+        'single_file_export_decision',
+        () => this.singleFileExportAttempt.evaluate({strategy, prefs})
+      );
       this.captureDiagnostics.attachSingleFileExportAttempt(diagnosticsV2, diagnostics.singleFileExportAttempt);
       largePageNoticeShown = await this.notifyLargePageStrategy(tab, strategy, largePageNoticeShown);
-      plan = planner.createPlan(page);
+      const postPlanSticky = await timePhase('sticky_normalization', () => this.contentAgent.normalizeSticky(tab.id, {
+        capturePolicy
+      }));
+      diagnostics.stickyNormalization = {
+        postPlan: postPlanSticky,
+        active: postPlanSticky
+      };
 
       stitcher = strategy.mode === 'tiled-output' ?
         new self.CanvasTiler({page, prefs, strategy}) :
@@ -120,7 +216,9 @@ self.CaptureController = class CaptureController {
       });
 
       this.chrome.action.setBadgeText({tabId: tab.id, text: 'R'});
-      diagnostics.stepper = await stepper.run({tab, plan});
+      diagnostics.stepper = await timePhase('capture_stepper', () => stepper.run({tab, plan}), {
+        framesPlanned: plan.total
+      });
       this.captureDiagnostics.attachImageReadinessSummary(diagnosticsV2, diagnostics);
     }
     catch (error) {
@@ -132,13 +230,18 @@ self.CaptureController = class CaptureController {
     }
     finally {
       if (originalPage) {
-        await this.cleanup.restore({
+        const cleanupDiagnostics = await timePhase('cleanup_restore', () => this.cleanup.restore({
           tabId: tab.id,
           originalX: originalPage.x,
           originalY: originalPage.y,
           originalWindowX: originalPage.windowX,
           originalWindowY: originalPage.windowY
-        });
+        }));
+        diagnostics.cleanup = cleanupDiagnostics;
+        diagnosticsV2.cleanup = cleanupDiagnostics;
+      }
+      if (tab?.id) {
+        await this.quirks.cleanup(tab.id).catch(() => {});
       }
       if (tab?.id) {
         await Promise.resolve(this.chrome.action.setBadgeText({
@@ -162,7 +265,7 @@ self.CaptureController = class CaptureController {
       if (strategy?.mode === 'tiled-output') {
         return {
           mode: 'tiled-output',
-          files: await stitcher.toFiles(),
+          files: await timePhase('render_output_files', () => stitcher.toFiles()),
           strategy,
           diagnostics,
           diagnosticsV2
@@ -171,7 +274,7 @@ self.CaptureController = class CaptureController {
 
       return {
         mode: 'single-canvas',
-        blob: await stitcher.toBlob(),
+        blob: await timePhase('render_output_blob', () => stitcher.toBlob()),
         strategy,
         diagnostics,
         diagnosticsV2
@@ -194,9 +297,13 @@ self.CaptureController = class CaptureController {
 
     try {
       result = await this.captureEntire(tab);
+      const exportStarted = Date.now();
       const exportStatus = result.files ?
         await this.store.saveMultiple(result.files, tab) :
         await this.store.save(result.blob, tab);
+      this.captureDiagnostics.recordTiming(result.diagnosticsV2, 'download_export', Date.now() - exportStarted, {
+        fileCount: exportStatus.files?.length || 0
+      });
 
       this.captureDiagnostics.attachExportStatus(result.diagnosticsV2, exportStatus);
       if (exportStatus.errors?.length) {
@@ -251,6 +358,58 @@ self.CaptureController = class CaptureController {
     });
   }
 
+  async probeViewportBlockingFallback(tab, page, plan, capturePolicy, prefs = {}) {
+    if (!capturePolicy?.viewportBlockingProbe || capturePolicy?.mode === 'viewport-only') {
+      return {triggered: false, skipped: true, reason: 'probe-disabled'};
+    }
+
+    const firstScrollPosition = plan?.positions?.find(position =>
+      Number(position?.y || 0) > 0
+    );
+
+    if (!firstScrollPosition) {
+      return {triggered: false, skipped: true, reason: 'single-frame-plan'};
+    }
+
+    const plannedY = Math.max(0, Number(firstScrollPosition.y || 0));
+    const plannedX = Math.max(0, Number(firstScrollPosition.x || 0));
+    const startScroll = await this.pageProbe.readScroll(tab.id);
+
+    await this.pageProbe.scrollTo(tab.id, plannedX, plannedY);
+
+    const delayMs = Math.max(120, Math.min(450, Number(prefs?.delay || 180)));
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+
+    const probeScroll = await this.pageProbe.readScroll(tab.id);
+
+    await this.pageProbe.scrollTo(
+      tab.id,
+      Math.max(0, Number(startScroll?.x || 0)),
+      Math.max(0, Number(startScroll?.y || 0))
+    );
+    await new Promise(resolve => setTimeout(resolve, 80));
+
+    const actualY = Math.max(0, Number(probeScroll?.y || 0));
+    const expectedY = Math.max(1, plannedY);
+    const movedEnough = actualY >= Math.min(expectedY * 0.5, Math.max(48, page.h * 0.18));
+
+    if (movedEnough) {
+      return {
+        triggered: false,
+        reason: 'probe-scroll-moved',
+        plannedY,
+        actualY
+      };
+    }
+
+    return {
+      triggered: true,
+      reason: 'viewport-blocking-overlay-scroll-stuck',
+      plannedY,
+      actualY
+    };
+  }
+
   async notifyLargePageStrategy(tab, strategy, alreadyShown) {
     if (strategy.mode !== 'tiled-output' || alreadyShown) {
       return alreadyShown;
@@ -269,6 +428,14 @@ self.CaptureController = class CaptureController {
     }).catch(() => {});
 
     return true;
+  }
+
+  assertMeasuredPage(page, stage) {
+    if (page && typeof page === 'object') {
+      return;
+    }
+
+    throw new Error(`PageProbe returned no measurement during ${stage || 'capture'} stage.`);
   }
 
   mergeCapturePolicies(primary, secondary) {
@@ -290,6 +457,7 @@ self.CaptureController = class CaptureController {
       version: Math.max(Number(primary.version) || 1, Number(secondary.version) || 1),
       mode: viewportOnly ? 'viewport-only' : (secondary.mode || primary.mode || 'full-page'),
       reasons,
+      viewportBlockingProbe: Boolean(primary.viewportBlockingProbe || secondary.viewportBlockingProbe),
       preserveFirstFrame: primary.preserveFirstFrame !== false && secondary.preserveFirstFrame !== false,
       skipLazyWarmupBeforeFirstFrame: Boolean(
         primary.skipLazyWarmupBeforeFirstFrame ||
@@ -314,7 +482,49 @@ self.CaptureController = class CaptureController {
         ),
         preserveDimmedBackdrop: primary.afterFirstFrame?.preserveDimmedBackdrop !== false &&
           secondary.afterFirstFrame?.preserveDimmedBackdrop !== false
+      },
+      quirks: {
+        ...(primary.quirks || {}),
+        ...(secondary.quirks || {}),
+        preserveFixedBackground: Boolean(
+          primary.quirks?.preserveFixedBackground ||
+          secondary.quirks?.preserveFixedBackground
+        ),
+        fixedBackgroundAttribute: secondary.quirks?.fixedBackgroundAttribute ||
+          primary.quirks?.fixedBackgroundAttribute,
+        knownLightboxRoot: Boolean(
+          primary.quirks?.knownLightboxRoot ||
+          secondary.quirks?.knownLightboxRoot
+        )
       }
+    };
+  }
+
+  mergePageRiskDiagnostics(initialDiagnostics = {}, currentDiagnostics = {}) {
+    const initialRiskFlags = Array.isArray(initialDiagnostics.riskFlags) ? initialDiagnostics.riskFlags : [];
+    const currentRiskFlags = Array.isArray(currentDiagnostics.riskFlags) ? currentDiagnostics.riskFlags : [];
+    const riskFlags = Array.from(new Set([...initialRiskFlags, ...currentRiskFlags]));
+    const fixedStickyCandidateCount = Math.max(
+      Number(initialDiagnostics.fixedStickyCandidateCount) || 0,
+      Number(currentDiagnostics.fixedStickyCandidateCount) || 0
+    );
+    const visibleOverlayCandidateCount = Math.max(
+      Number(initialDiagnostics.visibleOverlayCandidateCount) || 0,
+      Number(currentDiagnostics.visibleOverlayCandidateCount) || 0
+    );
+
+    return {
+      ...(initialDiagnostics || {}),
+      ...(currentDiagnostics || {}),
+      riskFlags,
+      fixedStickyCandidateCount,
+      fixedStickyCandidates: (currentDiagnostics.fixedStickyCandidates || []).length ?
+        currentDiagnostics.fixedStickyCandidates :
+        (initialDiagnostics.fixedStickyCandidates || []),
+      visibleOverlayCandidateCount,
+      visibleOverlayCandidates: (currentDiagnostics.visibleOverlayCandidates || []).length ?
+        currentDiagnostics.visibleOverlayCandidates :
+        (initialDiagnostics.visibleOverlayCandidates || [])
     };
   }
 

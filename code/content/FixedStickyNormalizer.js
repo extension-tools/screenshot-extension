@@ -3,16 +3,30 @@
     constructor({stack}) {
       this.stack = stack;
       this.hiddenElements = new WeakSet();
+      this.normalizedStickyElements = new WeakSet();
+      this.stickyNormalizationRuleRoots = new WeakSet();
+      this.stickyNormalizationPrepared = false;
       this.repeatOverlaySuppressionApplied = false;
       this.dimmedBackdropSnapshot = null;
       this.syntheticDimBackdrop = null;
+      this.repeatedEdgeOverlaySnapshots = [];
     }
 
-    beforeFrame({frameIndex = 0, capturePolicy = null} = {}) {
+    beforeFrame({frameIndex = 0, stage = null, capturePolicy = null} = {}) {
       const policy = this.normalizeCapturePolicy(capturePolicy);
       const afterFirstFramePolicy = policy.afterFirstFrame || {};
       const isFirstFrame = Number(frameIndex) === 0;
-      this.recordDimmedBackdropState();
+      const dimmedBackdropRecorded = isFirstFrame && afterFirstFramePolicy.preserveDimmedBackdrop !== false ?
+        this.recordDimmedBackdropState({frameIndex, capturePolicy: policy}) :
+        false;
+      const repeatedEdgeOverlaySuppression = afterFirstFramePolicy.suppressRepeatedOverlays !== false ?
+        (isFirstFrame ?
+          this.recordRepeatedEdgeOverlaySnapshots() :
+          this.hideRepeatedEdgeOverlays({frameIndex})) :
+        {
+          snapshotCount: this.repeatedEdgeOverlaySnapshots.length,
+          hiddenCount: 0
+        };
       const dimmedBackdropPanelsHidden = !isFirstFrame && afterFirstFramePolicy.preserveDimmedBackdrop !== false ?
         this.preserveDimmedBackdropState({frameIndex}) :
         0;
@@ -23,7 +37,13 @@
         this.ensureSyntheticDimmedBackdrop({frameIndex}) :
         false;
       const candidates = this.findCandidates({frameIndex, capturePolicy: policy});
-      let hidden = 0;
+      const chromeDiagnostics = this.collectChromeDiagnostics({
+        frameIndex,
+        stage,
+        capturePolicy: policy,
+        candidates
+      });
+      let hidden = repeatedEdgeOverlaySuppression.hiddenCount;
       let transformed = 0;
 
       for (const candidate of candidates) {
@@ -49,8 +69,15 @@
         suppressionApplied,
         dimmedBackdropPanelsHidden,
         syntheticDimBackdropApplied,
+        dimmedBackdropRecorded,
+        dimmedBackdropSnapshot: Boolean(this.dimmedBackdropSnapshot),
+        dimmedBackdropSource: this.dimmedBackdropSnapshot?.source || null,
         capturePolicyApplied: Boolean(capturePolicy),
-        suppressVisibleNavOverlay: !isFirstFrame && Boolean(afterFirstFramePolicy.suppressVisibleNavOverlay)
+        suppressVisibleNavOverlay: !isFirstFrame && Boolean(afterFirstFramePolicy.suppressVisibleNavOverlay),
+        repeatedEdgeOverlaySuppression,
+        chromeCandidates: chromeDiagnostics.candidates,
+        chromeCandidateCount: chromeDiagnostics.candidateCount,
+        chromeCandidateKinds: chromeDiagnostics.kinds
       };
     }
 
@@ -73,11 +100,263 @@
         },
         afterFirstFrame: {
           normalizeFixedSticky: true,
-          suppressVisibleNavOverlay: true,
+          suppressVisibleNavOverlay: false,
           suppressRepeatedOverlays: true,
           preserveDimmedBackdrop: true
         }
       };
+    }
+
+    prepareStickyNormalization({capturePolicy = null} = {}) {
+      if (this.stickyNormalizationPrepared || !document.body) {
+        return {
+          applied: false,
+          normalized: 0,
+          reason: this.stickyNormalizationPrepared ? 'already-prepared' : 'missing-body'
+        };
+      }
+
+      const policy = this.normalizeCapturePolicy(capturePolicy);
+      if (policy.mode === 'viewport-only') {
+        return {
+          applied: false,
+          normalized: 0,
+          reason: 'viewport-only'
+        };
+      }
+
+      this.stickyNormalizationPrepared = true;
+
+      const normalizedElements = [];
+      const roots = new Set();
+      const shadowRoots = new Set();
+      for (const element of this.collectElements(document.body)) {
+        if (this.normalizedStickyElements.has(element) || this.shouldSkipBlanketStickyNormalization(element)) {
+          continue;
+        }
+
+        const style = getComputedStyle(element);
+        if (style.position !== 'sticky') {
+          continue;
+        }
+
+        this.stack.setAttribute(element, 'data-screenshot-extension-sticky-normalized', 'true');
+        this.convertStickyToRelative(element);
+        this.normalizedStickyElements.add(element);
+        normalizedElements.push(element);
+
+        const root = element.getRootNode ? element.getRootNode() : document;
+        if (root) {
+          roots.add(root);
+          if (root !== document) {
+            shadowRoots.add(root);
+          }
+        }
+      }
+
+      for (const root of roots) {
+        this.installStickyNormalizationRule(root);
+      }
+
+      return {
+        applied: true,
+        normalized: normalizedElements.length,
+        shadowRootCount: shadowRoots.size,
+        ruleRootCount: roots.size,
+        reason: 'blanket-sticky-to-relative'
+      };
+    }
+
+    shouldSkipBlanketStickyNormalization(element) {
+      return !element ||
+        element === document.documentElement ||
+        element === document.body ||
+        element.hasAttribute('data-screenshot-extension-quirk-capture-root') ||
+        element.hasAttribute('data-screenshot-extension-quirk-fixed-background') ||
+        element.hasAttribute('data-screenshot-extension-sticky-normalized') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-backdrop') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-container');
+    }
+
+    installStickyNormalizationRule(root = document) {
+      if (!root || this.stickyNormalizationRuleRoots.has(root)) {
+        return false;
+      }
+
+      const parent = root === document ?
+        (document.head || document.documentElement) :
+        root;
+      if (!parent || !parent.appendChild) {
+        return false;
+      }
+
+      const style = document.createElement('style');
+      style.setAttribute('data-screenshot-extension-sticky-normalization', 'true');
+      style.textContent = `
+        [data-screenshot-extension-sticky-normalized="true"] {
+          position: relative !important;
+          top: auto !important;
+          right: auto !important;
+          bottom: auto !important;
+          left: auto !important;
+          inset: auto !important;
+          inset-block-start: auto !important;
+          inset-block-end: auto !important;
+          inset-inline-start: auto !important;
+          inset-inline-end: auto !important;
+        }
+      `;
+
+      this.stack.appendNode(parent, style);
+      this.stickyNormalizationRuleRoots.add(root);
+      return true;
+    }
+
+    recordRepeatedEdgeOverlaySnapshots() {
+      if (this.repeatedEdgeOverlaySnapshots.length || !document.body) {
+        return {
+          snapshotCount: this.repeatedEdgeOverlaySnapshots.length,
+          hiddenCount: 0
+        };
+      }
+
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const snapshots = [];
+
+      for (const element of this.collectElements(document.body)) {
+        if (snapshots.length >= 10) {
+          break;
+        }
+
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const edge = this.repeatedEdgeOverlayEdge(rect, viewportHeight);
+
+        if (!edge ||
+          !this.isRepeatedEdgeOverlayCandidate(element, style, rect, viewportWidth, viewportHeight) ||
+          this.isRepeatedEdgeOverlayProtected(element, style) ||
+          !this.isVisibleRect(rect, viewportWidth, viewportHeight)
+        ) {
+          continue;
+        }
+
+        snapshots.push({
+          element,
+          edge,
+          rect: this.rectSnapshot(rect)
+        });
+      }
+
+      this.repeatedEdgeOverlaySnapshots = snapshots;
+      return {
+        snapshotCount: snapshots.length,
+        hiddenCount: 0
+      };
+    }
+
+    hideRepeatedEdgeOverlays({frameIndex}) {
+      if (!document.body || Number(frameIndex) === 0 || !this.repeatedEdgeOverlaySnapshots.length) {
+        return {
+          snapshotCount: this.repeatedEdgeOverlaySnapshots.length,
+          hiddenCount: 0
+        };
+      }
+
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      let hiddenCount = 0;
+
+      for (const snapshot of this.repeatedEdgeOverlaySnapshots) {
+        const element = snapshot.element;
+        if (!element || !element.isConnected || this.hiddenElements.has(element)) {
+          continue;
+        }
+
+        const style = getComputedStyle(element);
+        if (this.isRepeatedEdgeOverlayProtected(element, style)) {
+          continue;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const edge = this.repeatedEdgeOverlayEdge(rect, viewportHeight);
+        if (edge !== snapshot.edge ||
+          !this.isVisibleRect(rect, viewportWidth, viewportHeight) ||
+          !this.isRepeatedEdgeOverlayCandidate(element, style, rect, viewportWidth, viewportHeight) ||
+          !this.isNearlySameRect(snapshot.rect, rect)
+        ) {
+          continue;
+        }
+
+        this.hideElement(element);
+        this.hiddenElements.add(element);
+        hiddenCount += 1;
+      }
+
+      return {
+        snapshotCount: this.repeatedEdgeOverlaySnapshots.length,
+        hiddenCount
+      };
+    }
+
+    isRepeatedEdgeOverlayCandidate(element, style, rect, viewportWidth, viewportHeight) {
+      if (!element || style.position !== 'fixed') {
+        return false;
+      }
+
+      const area = rect.width * rect.height;
+      const viewportArea = viewportWidth * viewportHeight;
+      const wideEnough = rect.width >= viewportWidth * 0.35;
+      const notFullscreen = area <= viewportArea * 0.55;
+      const visibleInteractionLayer = style.pointerEvents !== 'none' &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0';
+
+      return rect.width > 0 &&
+        rect.height > 0 &&
+        wideEnough &&
+        notFullscreen &&
+        visibleInteractionLayer;
+    }
+
+    isRepeatedEdgeOverlayProtected(element, style) {
+      return !element ||
+        style.position === 'sticky' ||
+        element.hasAttribute('data-screenshot-extension-sticky-normalized') ||
+        element.hasAttribute('data-screenshot-extension-quirk-capture-root') ||
+        element.hasAttribute('data-screenshot-extension-quirk-fixed-background') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-backdrop') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-container');
+    }
+
+    repeatedEdgeOverlayEdge(rect, viewportHeight) {
+      const threshold = Math.min(18, Math.max(8, viewportHeight * 0.025));
+      if (rect.top <= threshold) {
+        return 'top';
+      }
+      if (rect.bottom >= viewportHeight - threshold) {
+        return 'bottom';
+      }
+      return null;
+    }
+
+    rectSnapshot(rect) {
+      return {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      };
+    }
+
+    isNearlySameRect(snapshot, rect) {
+      const tolerance = 8;
+      const sizeTolerance = 12;
+      return Math.abs(snapshot.left - rect.left) <= tolerance &&
+        Math.abs(snapshot.top - rect.top) <= tolerance &&
+        Math.abs(snapshot.width - rect.width) <= sizeTolerance &&
+        Math.abs(snapshot.height - rect.height) <= sizeTolerance;
     }
 
     ensureRepeatOverlaySuppression({frameIndex}) {
@@ -163,8 +442,13 @@
       return hiddenPanels;
     }
 
-    recordDimmedBackdropState() {
-      if (!document.body || this.dimmedBackdropSnapshot) {
+    recordDimmedBackdropState({frameIndex = 0, capturePolicy = null} = {}) {
+      if (!document.body || this.dimmedBackdropSnapshot || Number(frameIndex) !== 0) {
+        return false;
+      }
+
+      const policy = this.normalizeCapturePolicy(capturePolicy);
+      if (policy.mode !== 'full-page') {
         return false;
       }
 
@@ -175,18 +459,73 @@
         const style = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
 
-        if (!this.isLikelyDimmedBackdropHost(element, style, rect, viewportWidth, viewportHeight)) {
+        if (style.position !== 'fixed') {
           continue;
         }
 
-        this.dimmedBackdropSnapshot = {
-          backgroundColor: this.createSyntheticBackdropColor(style),
-          zIndex: this.createSyntheticBackdropZIndex(style)
-        };
-        return true;
+        if (!this.isNearViewportCover(rect, viewportWidth, viewportHeight, 0.85, 24)) {
+          continue;
+        }
+
+        if (!this.hasModalBackdropContext(element, viewportWidth, viewportHeight)) {
+          continue;
+        }
+
+        if (this.hasDimmedBackdropPaint(style)) {
+          this.dimmedBackdropSnapshot = {
+            backgroundColor: this.createSyntheticBackdropColor(style),
+            zIndex: this.createSyntheticBackdropZIndex(style),
+            source: 'fixed-backdrop'
+          };
+          return true;
+        }
+
+        for (const child of Array.from(element.children || [])) {
+          const childStyle = getComputedStyle(child);
+          const childRect = child.getBoundingClientRect();
+
+          if (!this.isNearViewportCover(childRect, viewportWidth, viewportHeight, 0.75, 32)) {
+            continue;
+          }
+
+          if (!this.hasDimmedBackdropPaint(childStyle)) {
+            continue;
+          }
+
+          this.dimmedBackdropSnapshot = {
+            backgroundColor: this.createSyntheticBackdropColor(childStyle),
+            zIndex: this.createSyntheticBackdropZIndex(style),
+            source: 'direct-child-backdrop'
+          };
+          return true;
+        }
       }
 
       return false;
+    }
+
+    isNearViewportCover(rect, viewportWidth, viewportHeight, minAreaRatio, insetTolerance) {
+      const viewportArea = viewportWidth * viewportHeight;
+
+      return rect.width * rect.height >= viewportArea * minAreaRatio &&
+        rect.top <= insetTolerance &&
+        rect.left <= insetTolerance &&
+        rect.bottom >= viewportHeight - insetTolerance &&
+        rect.right >= viewportWidth - insetTolerance;
+    }
+
+    hasModalBackdropContext(element, viewportWidth, viewportHeight) {
+      const descriptor = [
+        element.tagName,
+        element.id,
+        element.className,
+        element.getAttribute('role'),
+        element.getAttribute('aria-modal')
+      ].join(' ').toLowerCase();
+
+      return /dialog|modal|popover|popup|overlay|backdrop|consent|cookie/.test(descriptor) ||
+        element.matches('dialog[open], [aria-modal="true"], [role="dialog"], [popover]') ||
+        this.findLikelyModalPanels(element, viewportWidth, viewportHeight).length > 0;
     }
 
     ensureSyntheticDimmedBackdrop({frameIndex}) {
@@ -283,6 +622,14 @@
           continue;
         }
 
+        if (element.hasAttribute('data-screenshot-extension-quirk-capture-root')) {
+          continue;
+        }
+
+        if (element.hasAttribute('data-screenshot-extension-quirk-fixed-background')) {
+          continue;
+        }
+
         const rect = element.getBoundingClientRect();
 
         if (!this.isVisibleRect(rect, viewportWidth, viewportHeight)) {
@@ -321,6 +668,211 @@
       }
 
       return candidates;
+    }
+
+    collectChromeDiagnostics({frameIndex = 0, stage = null, capturePolicy = null, candidates = []} = {}) {
+      if (!document.body || stage === 'before-scroll') {
+        return {
+          candidates: [],
+          candidateCount: 0,
+          kinds: []
+        };
+      }
+
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const edgeThreshold = 16;
+      const actionByElement = new WeakMap();
+      for (const candidate of candidates || []) {
+        if (candidate?.element) {
+          actionByElement.set(candidate.element, candidate.action || 'observe');
+        }
+      }
+
+      const diagnostics = [];
+      const kinds = new Set();
+      let candidateCount = 0;
+
+      for (const element of this.collectElements(document.body).slice(0, 900)) {
+        if (element === document.documentElement || element === document.body) {
+          continue;
+        }
+
+        const style = getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+          continue;
+        }
+
+        const rect = element.getBoundingClientRect();
+        if (!this.isVisibleRect(rect, viewportWidth, viewportHeight)) {
+          continue;
+        }
+
+        const kind = this.classifyChromeDiagnosticKind(
+          element,
+          style,
+          rect,
+          viewportWidth,
+          viewportHeight,
+          edgeThreshold,
+          capturePolicy
+        );
+        if (!kind) {
+          continue;
+        }
+
+        candidateCount += 1;
+        kinds.add(kind);
+
+        if (diagnostics.length >= 24) {
+          continue;
+        }
+
+        diagnostics.push(this.createChromeDiagnosticCandidate({
+          element,
+          style,
+          rect,
+          kind,
+          action: actionByElement.get(element) || 'observe',
+          frameIndex
+        }));
+      }
+
+      return {
+        candidates: diagnostics,
+        candidateCount,
+        kinds: Array.from(kinds).sort()
+      };
+    }
+
+    classifyChromeDiagnosticKind(element, style, rect, viewportWidth, viewportHeight, edgeThreshold, capturePolicy) {
+      if (
+        element.hasAttribute('data-screenshot-extension-quirk-capture-root') ||
+        element.hasAttribute('data-screenshot-extension-quirk-fixed-background') ||
+        element.hasAttribute('data-screenshot-extension-sticky-normalized') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-backdrop') ||
+        element.hasAttribute('data-screenshot-extension-preserve-dim-container')
+      ) {
+        return null;
+      }
+
+      if (this.isLikelyEdgeConsentOverlay(element, style, rect, viewportWidth, viewportHeight, edgeThreshold)) {
+        return 'cookie_strip';
+      }
+
+      if (this.isLikelyFloatingEdgeWidget(element, style, rect, viewportWidth, viewportHeight, edgeThreshold)) {
+        return 'floating_widget';
+      }
+
+      if (this.isLikelySideChrome(element, style, rect, viewportWidth, viewportHeight)) {
+        return this.isLikelyFilterPanelChrome(element) ? 'filter_panel' : 'side_sidebar';
+      }
+
+      if (this.isLikelyTopNavigationChrome(element, style, rect, viewportWidth, viewportHeight, edgeThreshold)) {
+        return 'top_header';
+      }
+
+      const policy = this.normalizeCapturePolicy(capturePolicy);
+      const afterFirstFramePolicy = policy.afterFirstFrame || {};
+      if (
+        afterFirstFramePolicy.suppressVisibleNavOverlay &&
+        this.isLikelyVisibleNavOverlay(element, style, rect, viewportWidth, viewportHeight) &&
+        !this.isLikelyProductOrMediaContent(element, rect, viewportWidth, viewportHeight)
+      ) {
+        return 'visible_nav_overlay';
+      }
+
+      if (style.position === 'fixed' && this.isPinnedToViewportEdge(rect, viewportWidth, viewportHeight, edgeThreshold)) {
+        return 'fixed_unknown';
+      }
+
+      if (style.position === 'sticky' && this.isPinnedToViewportEdge(rect, viewportWidth, viewportHeight, edgeThreshold)) {
+        return 'sticky_unknown';
+      }
+
+      return null;
+    }
+
+    isLikelyFilterPanelChrome(element) {
+      const descriptor = [
+        element.tagName,
+        element.id,
+        element.className,
+        element.getAttribute('role'),
+        element.getAttribute('aria-label')
+      ].join(' ').toLowerCase();
+      const text = (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+      return /filter|filters|facet|facets|refine|category|categories/.test(descriptor) ||
+        text.includes('store pickup') ||
+        text.includes('ship to address') ||
+        text.startsWith('filter');
+    }
+
+    createChromeDiagnosticCandidate({element, style, rect, kind, action, frameIndex}) {
+      const descriptor = [
+        element.tagName,
+        element.id,
+        element.className,
+        element.getAttribute('role'),
+        element.getAttribute('aria-label')
+      ].join(' ').replace(/\s+/g, ' ').trim().slice(0, 240);
+      const text = (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 320);
+      const edge = this.chromeEdgeBucket(rect);
+      const size = `${Math.round(rect.width / 20) * 20}x${Math.round(rect.height / 20) * 20}`;
+      const descriptorHash = this.hashString(descriptor);
+      const textHash = this.hashString(text);
+
+      return {
+        frameIndex: Number(frameIndex) || 0,
+        kind,
+        action,
+        position: style.position || 'static',
+        edge,
+        size,
+        rect: [
+          Math.round(rect.left),
+          Math.round(rect.top),
+          Math.round(rect.width),
+          Math.round(rect.height)
+        ].join(','),
+        textLength: text.length,
+        signature: `${kind}:${edge}:${size}:${descriptorHash}:${textHash}`
+      };
+    }
+
+    chromeEdgeBucket(rect) {
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+      if (rect.top <= Math.min(140, viewportHeight * 0.16)) {
+        return 'top';
+      }
+
+      if (rect.bottom >= viewportHeight - Math.min(96, viewportHeight * 0.12)) {
+        return 'bottom';
+      }
+
+      if (rect.left <= viewportWidth * 0.24) {
+        return 'left';
+      }
+
+      if (rect.right >= viewportWidth * 0.76) {
+        return 'right';
+      }
+
+      return 'center';
+    }
+
+    hashString(value) {
+      const input = String(value || '');
+      let hash = 0;
+
+      for (let index = 0; index < input.length; index += 1) {
+        hash = ((hash << 5) - hash + input.charCodeAt(index)) | 0;
+      }
+
+      return Math.abs(hash).toString(36);
     }
 
     applyElementAction(element, action, rect) {
@@ -363,7 +915,11 @@
       this.stack.setStyle(element, 'right', 'auto', 'important');
       this.stack.setStyle(element, 'bottom', 'auto', 'important');
       this.stack.setStyle(element, 'left', 'auto', 'important');
-      this.stack.setStyle(element, 'transform', 'none', 'important');
+      this.stack.setStyle(element, 'inset', 'auto', 'important');
+      this.stack.setStyle(element, 'inset-block-start', 'auto', 'important');
+      this.stack.setStyle(element, 'inset-block-end', 'auto', 'important');
+      this.stack.setStyle(element, 'inset-inline-start', 'auto', 'important');
+      this.stack.setStyle(element, 'inset-inline-end', 'auto', 'important');
     }
 
     collectElements(root) {
@@ -394,6 +950,9 @@
       const afterFirstFramePolicy = policy.afterFirstFrame || {};
 
       if (
+        element.hasAttribute('data-screenshot-extension-quirk-capture-root') ||
+        element.hasAttribute('data-screenshot-extension-quirk-fixed-background') ||
+        element.hasAttribute('data-screenshot-extension-sticky-normalized') ||
         element.hasAttribute('data-screenshot-extension-preserve-dim-backdrop') ||
         element.hasAttribute('data-screenshot-extension-preserve-dim-container')
       ) {
@@ -430,6 +989,10 @@
           return null;
         }
 
+        if (Number(frameIndex) > 0 && this.isLikelyFixedTopHeader(element, style, rect, viewportWidth, viewportHeight)) {
+          return 'hide';
+        }
+
         return 'fixed-to-absolute';
       }
 
@@ -438,18 +1001,6 @@
       }
 
       if (style.position === 'sticky') {
-        if (afterFirstFramePolicy.normalizeFixedSticky === false) {
-          return null;
-        }
-
-        if (
-          this.isLikelyTopNavigationChrome(element, style, rect, viewportWidth, viewportHeight, edgeThreshold) ||
-          this.isLikelyStickySideChrome(element, style, rect, viewportWidth, viewportHeight, edgeThreshold) ||
-          this.isLikelySideChrome(element, style, rect, viewportWidth, viewportHeight)
-        ) {
-          return 'sticky-to-relative';
-        }
-
         return null;
       }
 
@@ -871,6 +1422,19 @@
         rect.height <= 120;
 
       return !staticContentHeader && sparseChrome && nearTopLayer && (hasChromeSemantics || hasNavText);
+    }
+
+    isLikelyFixedTopHeader(element, style, rect, viewportWidth, viewportHeight) {
+      if (style.position !== 'fixed') {
+        return false;
+      }
+
+      const topAligned = rect.top < 22;
+      const wideEnough = rect.width >= viewportWidth * 0.55;
+      const notViewportOverlay = rect.height < viewportHeight - rect.top - 22;
+      const compactEnough = rect.height <= Math.min(220, viewportHeight * 0.32);
+
+      return topAligned && wideEnough && notViewportOverlay && compactEnough;
     }
 
     isLikelyStickySideChrome(element, style, rect, viewportWidth, viewportHeight, threshold) {
