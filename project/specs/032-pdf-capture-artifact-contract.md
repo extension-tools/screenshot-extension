@@ -1,4 +1,4 @@
-# 032: PDF CaptureArtifact Contract
+# 032: PDF Export v1 Runtime Contract
 
 ## Product Task
 
@@ -6,279 +6,191 @@
 
 ## Goal
 
-Define the contract between the existing capture pipeline and future PNG/PDF export adapters.
+Describe the actual shipped contract for `PDF export v1`.
 
-The goal is to add PDF export without adding a second capture engine.
+The implementation adds PDF export without adding a second capture engine and without changing the existing PNG capture pipeline.
 
-## Core Rule
-
-```text
-PDF must consume the existing CaptureArtifact.
-PDF must not re-probe, re-scroll, re-classify, or mutate the page.
-```
-
-## Architecture Position
-
-Current capture layers should remain intact:
+## Shipped Core Rule
 
 ```text
-PageProbe -> PositionPlanner -> CaptureStepper -> Output
+PDF export consumes the existing capture result.
+PDF export must not re-probe, re-scroll, re-classify, or mutate the page.
 ```
 
-The PDF work starts after capture output exists:
+## Shipped Architecture Position
+
+Capture layers remain unchanged:
 
 ```text
-CanvasStitcher / CanvasTiler
-  -> CaptureArtifact
-  -> ExportController
-      -> PngExporter
-      -> PdfExporter
-  -> CaptureStore
+PageProbe -> PositionPlanner -> CaptureStepper -> CanvasStitcher / CanvasTiler
 ```
 
-## CaptureArtifact Shape
+PDF work starts only after capture output already exists:
 
-`CaptureArtifact` is a plain data object produced by the output layer and consumed by export adapters.
+```text
+CaptureController.runCommand(...)
+  -> captureEntire(tab)
+  -> saveCaptureResult(result, tab, exportFormat)
+      -> savePngResult(result, tab)
+      -> exportPdfResult(result, tab)
+          -> PdfExporter.export({result})
+          -> CaptureStore.save(pdfBlob, tab)
+```
+
+## Ownership
+
+- `code/worker.js`
+  - normalizes `exportFormat`
+  - loads `PdfExporter` through `importScripts(...)`
+  - remains a thin command router
+- `code/capture/CaptureController.js`
+  - owns the export seam below the capture pipeline
+  - preserves the existing PNG save path
+  - routes PDF export to `PdfExporter`
+- `code/capture/PdfExporter.js`
+  - builds a final PDF from the existing capture result
+  - does not touch capture-time modules or the DOM
+
+## Runtime Input Contract
+
+`PdfExporter` consumes the existing `captureEntire()` result shape, not a separate `CaptureArtifact` object.
+
+Relevant fields:
 
 ```js
 {
-  version: 1,
-  format: "capture-artifact",
-
-  source: {
-    url: string,
-    title: string,
-    capturedAt: string
-  },
-
-  page: {
-    cssWidth: number,
-    cssHeight: number,
-    viewportWidth: number,
-    viewportHeight: number,
-    dpr: number
-  },
-
-  output: {
-    mode: "single-bitmap" | "tiled",
-    bitmapWidth: number,
-    bitmapHeight: number,
-    tileCount: number
-  },
-
-  singleBitmap: {
-    blob: Blob,
-    mimeType: "image/png",
-    width: number,
-    height: number
-  } | null,
-
-  tiles: [
-    {
-      index: number,
-      partNumber: number,
-      blob: Blob,
-      mimeType: "image/png",
-      x: number,
-      y: number,
-      width: number,
-      height: number
-    }
-  ],
-
-  capture: {
-    policy: object,
-    scrollTarget: object,
-    avoidRanges: array,
-    strategy: object
-  },
-
-  diagnosticsSummary: {
-    status: string,
-    failureReason: string | null,
-    imageReadiness: object | null,
-    output: object | null,
-    export: object | null
+  mode: "single-canvas" | "tiled-output",
+  blob: Blob | null,
+  files: Array<{
+    index: number,
+    blob: Blob
+  }> | null,
+  diagnosticsV2: {
+    export?: object
   }
 }
 ```
 
-## Required Fields
+Only these fields are required for `PDF v1` behavior:
 
 | Field | Required | Why |
 | --- | --- | --- |
-| `source.url` | yes | PDF metadata and filename context. |
-| `source.title` | yes | Human-readable filename/title. |
-| `page.cssWidth/cssHeight` | yes | PDF page sizing and scaling. |
-| `page.dpr` | yes | Correct bitmap-to-CSS scale conversion. |
-| `output.mode` | yes | Decide single-bitmap vs tile-based PDF generation. |
-| `output.bitmapWidth/bitmapHeight` | yes | PDF image placement. |
-| `singleBitmap.blob` | yes when mode is `single-bitmap` | Source image for PDF pages. |
-| `tiles[]` | yes when mode is `tiled` | Source images for PDF pages without a giant canvas. |
-| `capture.policy` | yes | Traceability; PDF must not recompute it. |
-| `capture.avoidRanges` | yes | Traceability and future PDF pagination safety. |
-| `diagnosticsSummary` | yes | Export can report status without deep capture diagnostics. |
+| `result.mode` | yes | Select `single-canvas` vs `tiled-output` export behavior. |
+| `result.blob` | yes when mode is `single-canvas` | Source bitmap for the one-page PDF path. |
+| `result.files[]` | yes when mode is `tiled-output` | Source tile images for the multi-page PDF path. |
+| `file.index` | yes for tiled output | Preserve page order when tiles are exported to PDF pages. |
+
+## PDF v1 Behavior
+
+`PDF v1` uses materialized capture output only.
+
+Rules:
+
+| Case | Shipped behavior |
+| --- | --- |
+| `single-canvas` | One capture bitmap becomes one PDF page. |
+| `tiled-output` | One tile becomes one PDF page. |
+| PNG export | Existing `save` / `saveMultiple` behavior remains unchanged. |
+| PDF export | A single final PDF file is saved through `CaptureStore.save(...)`. |
 
 ## Explicit Non-Responsibilities
 
-`CaptureArtifact` must not:
+`PDF v1` does not:
 
-- read the DOM;
-- scroll the page;
 - call `PageProbe.measure()`;
 - call `PositionPlanner.createPlan()`;
 - call `CaptureStepper.run()`;
 - invoke `ContentAgent`;
 - invoke `FixedStickyNormalizer`;
-- create new split-boundary decisions;
-- create new image-readiness decisions.
+- read the DOM;
+- scroll the page;
+- build a second capture loop;
+- build a new page-break planner;
+- merge all tiles into one giant raster before export;
+- create A4/Letter pagination.
 
-## Export Adapter Contract
+## Page Strategy
 
-An exporter receives a `CaptureArtifact` and returns an export result.
-
-```js
-async function exportArtifact({artifact, prefs}) {
-  return {
-    ok: boolean,
-    format: "png" | "pdf",
-    filename: string,
-    blob: Blob | null,
-    files: array,
-    diagnostics: {
-      source: "singleBitmap" | "tiles",
-      pageCount: number | null,
-      status: "saved" | "failed",
-      errors: array
-    }
-  };
-}
-```
-
-## PDF MVP Rules
-
-| Case | Expected behavior |
-| --- | --- |
-| Single bitmap capture | `PdfExporter` creates PDF pages from the bitmap. |
-| Tiled capture | `PdfExporter` creates PDF pages from tiles. It must not request a giant canvas. |
-| Export failure | Return controlled export error and preserve capture diagnostics. |
-| PNG export | Existing PNG behavior remains unchanged. |
-
-## PDF Page Strategy
-
-MVP should use page-based PDF output from existing bitmap/tiles.
-
-Product decision:
+The shipped `PDF v1` page strategy is:
 
 ```text
-PDF export uses A4/Letter-style pages, not one infinitely long PDF page.
+single-canvas -> one PDF page
+tiled-output -> one tile = one PDF page
 ```
 
-Default recommendation:
+This is intentionally different from a paginated print-style PDF design.
 
-```text
-PDF pages from existing capture bitmap/tiles.
-No new page capture logic.
-```
+`PDF v1` does not implement:
 
-The implementation must support a page size policy:
+- A4 pagination
+- Letter pagination
+- locale-based page size policy
+- user-selectable page size
 
-| Page size | Requirement |
-| --- | --- |
-| A4 | Required default for metric/non-US contexts unless product settings choose otherwise. |
-| Letter | Required for US-style export or future user preference. |
-
-Recommended MVP:
-
-```text
-Use A4/Letter PDF pages.
-For single bitmap, paginate by chosen PDF page height.
-For tiled output, map tiles into A4/Letter pages without recomposing a giant bitmap.
-```
-
-Open implementation decision:
-
-```text
-Choose default page size source:
-1. fixed default: A4;
-2. locale-based default: Letter for US, A4 otherwise;
-3. explicit user setting.
-```
-
-For the first implementation, prefer the smallest product surface:
-
-```text
-default A4, internal support for Letter, no new UI unless already required by export settings.
-```
+Those remain future product decisions, not shipped behavior.
 
 ## Diagnostics Contract
 
-PDF diagnostics are export diagnostics, not capture diagnostics.
+PDF diagnostics live inside the existing runtime export summary on `diagnosticsV2.export`.
 
-Add under existing export diagnostics:
+Shipped fields:
 
 ```text
+export.status
+export.files
+export.errors
 export.format = pdf
-export.pdf.source = singleBitmap | tiles
 export.pdf.pageCount
-export.pdf.status
-export.pdf.errors
+export.pdf.source
+export.pdf.pageMode
 ```
 
-Always-on:
+Meaning:
 
-- export format;
-- source mode;
-- page count;
-- download lifecycle;
-- export status/errors.
+- `export.status/files/errors` describe the save lifecycle
+- `export.format/pdf.*` describe the bounded PDF summary
 
-Debug/research only:
+No heavy artifacts are stored in diagnostics.
 
-- detailed pagination decisions;
-- per-page image placement details;
-- tile-to-page mapping samples.
+## Error Contract
 
-## Tests Before Implementation Is Done
+`PdfExporter` returns controlled failures for invalid runtime inputs:
 
-Add tests or assertions that prove:
+- unsupported capture result mode
+- missing `result.blob` for `single-canvas`
+- missing `result.files` for `tiled-output`
+- missing `file.blob` for an individual tile
 
-- PDF export does not call `PageProbe.measure()`;
-- PDF export does not call `PositionPlanner.createPlan()`;
-- PDF export does not call `CaptureStepper.run()`;
-- PDF export does not invoke `ContentAgent`;
-- PDF export does not invoke `FixedStickyNormalizer`;
-- single-bitmap artifact can produce a PDF export result;
-- tiled artifact can produce a PDF export result without allocating one giant canvas;
-- PNG export behavior stays unchanged.
+## Test Contract
 
-## Redteam Notes
+The shipped implementation is protected by:
 
-Risk: PDF becomes a second screenshot engine.
+- targeted runtime tests in `project/tests/export-format-plumbing-smoke.mjs`
+- browser-level PNG regression checks in `project/tests/capture-flow.mjs`
+- browser-level PDF smoke checks for:
+  - one `single-canvas` case
+  - one `tiled-output` case
 
-Reject any implementation that adds:
+Key assertions:
 
-- PDF-specific DOM probing;
-- PDF-specific scroll planning;
-- PDF-specific fixed/sticky logic;
-- PDF-specific split-boundary classification;
-- PDF-specific image-readiness logic.
+- `exportFormat: 'pdf'` is preserved through worker routing
+- invalid format falls back to `png`
+- `captureEntire()` runs once
+- PNG still uses the old save path
+- PDF uses `PdfExporter.export({result})`
+- PDF uses `CaptureStore.save(...)`
+- PDF does not use `saveMultiple(...)`
+- `single-canvas` yields one PDF page
+- `tiled-output` yields one page per tile
 
-Allowed:
+## Post-Implementation Note
 
-- PDF-specific page sizing;
-- PDF-specific image scaling;
-- PDF-specific metadata;
-- PDF-specific export diagnostics.
+`code/worker.js` was touched only as a load point for `PdfExporter` registration in `importScripts(...)`.
 
-## Implementation Boundary
+That does not make `worker.js` an owner of PDF export behavior.
 
-This spec is a pre-code contract.
+## Scope Boundary
 
-Do not implement PDF export until these are decided:
+This document describes the shipped `PDF export v1` contract.
 
-1. PDF library choice.
-2. PDF page size default: A4-only first, locale-based A4/Letter, or user setting.
-3. `CaptureArtifact` producer location.
-4. Whether to introduce `ExportController` immediately or keep a minimal `PdfExporter` first.
-5. Test strategy for "no second capture pipeline".
+It is not a pre-implementation artifact anymore.

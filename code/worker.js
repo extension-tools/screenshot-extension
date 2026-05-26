@@ -16,6 +16,7 @@ importScripts(
   'capture/CleanupManager.js',
   'capture/CaptureStepper.js',
   'capture/CaptureStore.js',
+  'capture/PdfExporter.js',
   'capture/CaptureController.js'
 );
 
@@ -57,6 +58,14 @@ function onCommand(cmd, tab) {
   });
 }
 
+function normalizeExportFormat(exportFormat) {
+  if (exportFormat === 'pdf') {
+    return 'pdf';
+  }
+
+  return 'png';
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   onCommand(info.menuItemId, tab, info);
 });
@@ -80,7 +89,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
 
-    captureController.runCommand('capture-entire', tab).then(() => {
+    const exportFormat = normalizeExportFormat(request.exportFormat);
+
+    captureController.runCommand('capture-entire', tab, {exportFormat}).then(() => {
       sendResponse({ok: true});
     }).catch(error => {
       sendResponse({

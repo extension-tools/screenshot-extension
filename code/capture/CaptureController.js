@@ -16,6 +16,7 @@ self.CaptureController = class CaptureController {
     });
     this.viewportCapture = new self.ViewportCapture({chrome});
     this.store = new self.CaptureStore({chrome});
+    this.pdfExporter = new self.PdfExporter();
     this.cleanup = new self.CleanupManager({
       chrome,
       pageProbe: this.pageProbe,
@@ -288,24 +289,29 @@ self.CaptureController = class CaptureController {
     }
   }
 
-  async runCommand(cmd, tab) {
+  async runCommand(cmd, tab, options = {}) {
     if (cmd !== 'capture-entire') {
       throw new Error('Unsupported command: ' + cmd);
     }
+
+    const exportFormat = options.exportFormat === 'pdf' ? 'pdf' : 'png';
 
     let result;
 
     try {
       result = await this.captureEntire(tab);
       const exportStarted = Date.now();
-      const exportStatus = result.files ?
-        await this.store.saveMultiple(result.files, tab) :
-        await this.store.save(result.blob, tab);
+      const {exportStatus, exportSummary} = await this.saveCaptureResult(result, tab, exportFormat);
       this.captureDiagnostics.recordTiming(result.diagnosticsV2, 'download_export', Date.now() - exportStarted, {
         fileCount: exportStatus.files?.length || 0
       });
 
       this.captureDiagnostics.attachExportStatus(result.diagnosticsV2, exportStatus);
+      if (exportSummary) {
+        result.diagnosticsV2.export = result.diagnosticsV2.export || {};
+        result.diagnosticsV2.export.format = 'pdf';
+        result.diagnosticsV2.export.pdf = exportSummary;
+      }
       if (exportStatus.errors?.length) {
         this.captureDiagnostics.markFailure(result.diagnosticsV2, new Error(exportStatus.errors[0]));
         await this.storeCaptureDiagnostics(result);
@@ -343,6 +349,39 @@ self.CaptureController = class CaptureController {
         })).catch(() => {});
       }
     }
+  }
+
+  // Keep export branching below the capture pipeline.
+  async saveCaptureResult(result, tab, exportFormat) {
+    const normalizedExportFormat = exportFormat === 'pdf' ? 'pdf' : 'png';
+
+    if (normalizedExportFormat === 'pdf') {
+      return this.exportPdfResult(result, tab);
+    }
+
+    return {
+      exportStatus: await this.savePngResult(result, tab),
+      exportSummary: null
+    };
+  }
+
+  // Preserve the existing PNG save path unchanged.
+  async savePngResult(result, tab) {
+    if (result.files) {
+      return this.store.saveMultiple(result.files, tab);
+    }
+
+    return this.store.save(result.blob, tab);
+  }
+
+  // PDF v1 emits one final file plus bounded summary metadata.
+  async exportPdfResult(result, tab) {
+    const pdfResult = await this.pdfExporter.export({result});
+
+    return {
+      exportStatus: await this.store.save(pdfResult.blob, tab),
+      exportSummary: pdfResult.summary
+    };
   }
 
   async storeCaptureDiagnostics(result) {

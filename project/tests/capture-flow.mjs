@@ -360,6 +360,27 @@ const cases = [
     }
   },
   {
+    name: 'huge-page-tiling-pdf-multi-page',
+    path: '/huge-page-guard.html',
+    expected: 'download-pdf',
+    exportFormat: 'pdf',
+    assertions: {
+      pdf: {
+        pageCount: 2
+      },
+      captureDiagnosticsV2: {
+        status: 'success',
+        outputStrategy: 'tiled-output',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        exportFormat: 'pdf',
+        pdfPageCount: 2,
+        pdfSource: 'tiles',
+        pdfPageMode: 'multi-page'
+      }
+    }
+  },
+  {
     name: 'too-many-parts-page',
     path: '/too-many-parts-page.html',
     expected: 'error',
@@ -486,6 +507,58 @@ const cases = [
           minPixels: 12000
         }
       ]
+    }
+  },
+  {
+    name: 'empty-editor-side-palette-page-explicit-png',
+    path: '/empty-editor-side-palette-page.html',
+    expected: 'download',
+    exportFormat: 'png',
+    assertions: {
+      maxHeight: 1300,
+      minColorPixels: [
+        {
+          name: 'visible editor side palette is included',
+          color: [20, 90, 190],
+          minPixels: 12000
+        }
+      ]
+    }
+  },
+  {
+    name: 'empty-editor-side-palette-page-invalid-format-falls-back-to-png',
+    path: '/empty-editor-side-palette-page.html',
+    expected: 'download',
+    exportFormat: 'zip',
+    assertions: {
+      maxHeight: 1300,
+      minColorPixels: [
+        {
+          name: 'visible editor side palette is included',
+          color: [20, 90, 190],
+          minPixels: 12000
+        }
+      ]
+    }
+  },
+  {
+    name: 'empty-editor-side-palette-page-pdf-single-page',
+    path: '/empty-editor-side-palette-page.html',
+    expected: 'download-pdf',
+    exportFormat: 'pdf',
+    assertions: {
+      pdf: {
+        pageCount: 1
+      },
+      captureDiagnosticsV2: {
+        status: 'success',
+        exportStatus: 'saved',
+        scrollTargetType: 'window',
+        exportFormat: 'pdf',
+        pdfPageCount: 1,
+        pdfSource: 'single-bitmap',
+        pdfPageMode: 'single-page'
+      }
     }
   },
   {
@@ -1483,6 +1556,45 @@ const waitForDownloadedPngs = async ({downloadsDir, minCount = 1, timeoutMs = 30
   throw new Error(`PNG downloads did not complete.${lastError ? ` Last error: ${lastError.message}` : ''}`);
 };
 
+const waitForDownloadedPdf = async ({downloadsDir, timeoutMs = 20000}) => {
+  const deadline = Date.now() + timeoutMs;
+  let lastError;
+
+  while (Date.now() < deadline) {
+    const entries = await fs.readdir(downloadsDir).catch(() => []);
+    const candidates = entries
+      .filter(name => !name.endsWith('.crdownload'))
+      .map(name => path.join(downloadsDir, name));
+
+    for (const file of candidates) {
+      try {
+        const stat = await fs.stat(file);
+        if (!stat.isFile()) {
+          continue;
+        }
+
+        const bytes = await fs.readFile(file);
+        if (bytes.length === 0) {
+          continue;
+        }
+
+        const header = bytes.subarray(0, 8).toString('latin1');
+        if (!header.startsWith('%PDF-')) {
+          continue;
+        }
+
+        return {file, bytes};
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+
+  throw new Error(`PDF download did not complete.${lastError ? ` Last error: ${lastError.message}` : ''}`);
+};
+
 const assertNoDownloadedPng = async ({downloadsDir, timeoutMs = 1500}) => {
   try {
     const {file} = await waitForDownloadedPng({downloadsDir, timeoutMs});
@@ -1726,6 +1838,33 @@ const evaluatePngAssertions = ({testCase, png, captureDiagnostics}) => {
   return results;
 };
 
+// Browser-level PDF smoke stays intentionally small: header plus page count.
+const evaluatePdfAssertions = ({testCase, bytes, captureDiagnostics}) => {
+  const results = [];
+  const pdfText = Buffer.from(bytes).toString('latin1');
+  const pageCountMatch = pdfText.match(/\/Count (\d+)\b/);
+  const pageCount = pageCountMatch ? Number(pageCountMatch[1]) : null;
+  const expectedPdf = testCase.assertions?.pdf || {};
+
+  results.push({
+    name: 'downloaded file starts with PDF header',
+    passed: pdfText.startsWith('%PDF-'),
+    detail: pdfText.slice(0, 8) || 'n/a'
+  });
+
+  if (expectedPdf.pageCount !== undefined) {
+    results.push({
+      name: 'downloaded PDF page count matches expected value',
+      passed: pageCount === expectedPdf.pageCount,
+      detail: `${pageCount ?? 'n/a'}, expected ${expectedPdf.pageCount}`
+    });
+  }
+
+  results.push(...evaluateCaptureDiagnosticsV2Assertions({testCase, captureDiagnostics}));
+
+  return results;
+};
+
 const evaluateMultiPngAssertions = ({testCase, pngs}) => {
   const results = [];
   const minDownloads = testCase.assertions?.minDownloads || 1;
@@ -1905,6 +2044,38 @@ const evaluateCaptureDiagnosticsV2Assertions = ({testCase, captureDiagnostics}) 
       name: 'capture diagnostics output strategy matches expected strategy',
       passed: capture?.output?.strategy === expected.outputStrategy,
       detail: `${capture?.output?.strategy || 'n/a'}, expected ${expected.outputStrategy}`
+    });
+  }
+
+  if (expected.exportFormat !== undefined) {
+    results.push({
+      name: 'capture diagnostics export format matches expected format',
+      passed: capture?.export?.format === expected.exportFormat,
+      detail: `${capture?.export?.format || 'n/a'}, expected ${expected.exportFormat}`
+    });
+  }
+
+  if (expected.pdfPageCount !== undefined) {
+    results.push({
+      name: 'capture diagnostics PDF page count matches expected value',
+      passed: capture?.export?.pdf?.pageCount === expected.pdfPageCount,
+      detail: `${capture?.export?.pdf?.pageCount ?? 'n/a'}, expected ${expected.pdfPageCount}`
+    });
+  }
+
+  if (expected.pdfSource !== undefined) {
+    results.push({
+      name: 'capture diagnostics PDF source matches expected source',
+      passed: capture?.export?.pdf?.source === expected.pdfSource,
+      detail: `${capture?.export?.pdf?.source || 'n/a'}, expected ${expected.pdfSource}`
+    });
+  }
+
+  if (expected.pdfPageMode !== undefined) {
+    results.push({
+      name: 'capture diagnostics PDF page mode matches expected mode',
+      passed: capture?.export?.pdf?.pageMode === expected.pdfPageMode,
+      detail: `${capture?.export?.pdf?.pageMode || 'n/a'}, expected ${expected.pdfPageMode}`
     });
   }
 
@@ -2290,7 +2461,7 @@ const runCase = async ({testCase, origin}) => {
       storageOverrides: testCase.storageOverrides || {}
     });
 
-    const response = await extensionPage.evaluate(async () => {
+    const response = await extensionPage.evaluate(async exportFormat => {
       const [tab] = await chrome.tabs.query({
         active: true,
         lastFocusedWindow: true
@@ -2298,9 +2469,10 @@ const runCase = async ({testCase, origin}) => {
 
       return chrome.runtime.sendMessage({
         method: 'capture-active-tab',
-        tabId: tab?.id
+        tabId: tab?.id,
+        exportFormat
       });
-    });
+    }, testCase.exportFormat);
     report.captureDiagnostics = await readCaptureDiagnostics(extensionPage);
     report.notificationEvent = await readNotificationEvent(extensionPage);
 
@@ -2389,6 +2561,35 @@ const runCase = async ({testCase, origin}) => {
     }
 
     if (testCase.expected !== 'download') {
+      if (testCase.expected === 'download-pdf') {
+        const {file, bytes} = await waitForDownloadedPdf({downloadsDir});
+        const artifactName = downloadedArtifactName({
+          downloadedFile: file,
+          captureDiagnostics: report.captureDiagnostics,
+          index: 0
+        });
+        const copiedFile = path.join(caseDir, artifactName);
+        const latestCopy = path.join(latestDir, artifactName);
+        await fs.copyFile(file, copiedFile);
+        await fs.copyFile(file, latestCopy);
+
+        report.assertions = evaluatePdfAssertions({
+          testCase,
+          bytes,
+          captureDiagnostics: report.captureDiagnostics
+        });
+        const failedAssertions = report.assertions.filter(assertion => !assertion.passed);
+        report.download = copiedFile;
+        report.pdf = {bytes: bytes.length};
+
+        if (failedAssertions.length) {
+          throw new Error(failedAssertions.map(assertion => `${assertion.name}: ${assertion.detail}`).join('\n'));
+        }
+
+        report.status = 'passed';
+        return report;
+      }
+
       throw new Error(`Unsupported case expectation: ${testCase.expected}`);
     }
 

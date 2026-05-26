@@ -1,44 +1,50 @@
-# Product Task: PDF CaptureArtifact Contract
+# Product Task: PDF Export v1
 
 ## Problem
 
-PDF export is a current product need, but adding it directly into the capture flow could create a second screenshot engine. That would duplicate page probing, scroll planning, fixed/sticky handling, split-boundary logic, diagnostics, and cleanup risk.
+Users need PDF export for full-page capture, but adding it directly into the capture flow would risk a second screenshot engine and duplicate page logic.
 
 ## User
 
-Users who want to save a full-page capture as PDF with the same visual result and reliability as PNG.
+Users who want to save a full-page screenshot as PDF with the same capture reliability as PNG.
 
 ## Value
 
-The product can add PDF export without making capture slower, less stable, or harder to reason about. The engineering team gets a clean handoff between capture and export.
+The product gains PDF export without making capture slower, less stable, or harder to maintain.
 
-## Desired Behavior
+## Shipped Behavior
 
-The extension captures the page once, produces a shared `CaptureArtifact`, and then exports that artifact as PNG or PDF.
+The extension captures the page once and then exports the existing capture result as either PNG or PDF.
 
 ```text
-PageProbe -> PositionPlanner -> CaptureStepper -> CaptureArtifact -> Export adapter
+PageProbe -> PositionPlanner -> CaptureStepper -> CanvasStitcher / CanvasTiler -> export seam
 ```
 
-PDF export must not re-measure the page, re-scroll the page, re-classify page elements, mutate DOM/CSS, or run a second capture loop.
+`PDF v1` behavior:
+
+- `single-canvas` -> one PDF page
+- `tiled-output` -> one tile = one PDF page
+- PNG export remains unchanged
+- PDF export saves one final PDF file
 
 ## Non-Goals
 
-- No separate PDF capture pipeline.
-- No PDF-specific `PageProbe`, `PositionPlanner`, `CaptureStepper`, `FixedStickyNormalizer`, or split-boundary planner.
-- No print-CSS based PDF as the default screenshot export path.
-- No redesign of the full output pipeline in this task.
-- No UI work in this task.
+- No separate PDF capture pipeline
+- No PDF-specific `PageProbe`, `PositionPlanner`, or `CaptureStepper`
+- No DOM re-measure or second capture loop for PDF
+- No print-CSS export path
+- No A4/Letter pagination in `v1`
+- No new UI for PDF settings
 
 ## Success Criteria
 
-- A documented `CaptureArtifact` contract exists.
-- The contract supports both single bitmap and tiled captures.
-- The contract contains enough metadata for PDF export: dimensions, DPR, title, source URL, output mode, tiles/bitmap, boundaries, and diagnostics summary.
-- PDF export requirements explicitly forbid duplicate DOM/capture work.
-- Future implementation can add `PdfExporter` as an output/export adapter.
+- PDF export works off the existing capture result
+- PNG behavior remains unchanged
+- `single-canvas` PDF works end-to-end
+- `tiled-output` PDF works end-to-end
+- The implementation does not introduce a second capture engine
+- Runtime and browser-level tests cover both PNG regression and PDF smoke
 
 ## Related Spec
 
 - `../specs/032-pdf-capture-artifact-contract.md`
-- `../docs/pdf-export-architecture-decision.md`
