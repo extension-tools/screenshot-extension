@@ -8,8 +8,9 @@ const repoRoot = path.resolve(projectRoot, '..');
 const codeRoot = path.resolve(projectRoot, '..', 'code');
 
 const readJson = file => JSON.parse(fs.readFileSync(path.join(codeRoot, file), 'utf8'));
+const pathExists = file => fs.existsSync(path.join(repoRoot, file));
 
-readJson('manifest.json');
+const manifest = readJson('manifest.json');
 
 try {
   execFileSync('git', ['diff', '--quiet', '--', 'code/manifest.json'], {
@@ -83,6 +84,43 @@ const assert = (condition, message) => {
   }
 };
 
+const assertPathExists = (file, message) => {
+  assert(pathExists(file), message || `${file} must exist`);
+};
+
+const gitCheckIgnore = file => {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--no-index', file], {
+      cwd: repoRoot,
+      stdio: 'pipe'
+    });
+
+    return true;
+  }
+  catch (error) {
+    if (error.status === 1) {
+      return false;
+    }
+
+    throw error;
+  }
+};
+
+const assertIgnored = (file, message) => {
+  assert(gitCheckIgnore(file), message || `${file} must be ignored by .gitignore`);
+};
+
+const assertNotIgnored = (file, message) => {
+  assert(!gitCheckIgnore(file), message || `${file} must not be ignored by .gitignore`);
+};
+
+const assertManifestReferencedFile = file => {
+  assertPathExists(
+    path.join('code', file),
+    `manifest references missing package candidate file: code/${file}`
+  );
+};
+
 const loadSelfClass = (source, className) => {
   const sandboxSelf = {};
   const loadedClass = Function('self', `${source}\nreturn self.${className};`)(sandboxSelf);
@@ -116,6 +154,65 @@ const prepareCaptureSource = contentAgentSource.slice(
   contentAgentSource.indexOf('prepareCapture(options = {})'),
   contentAgentSource.indexOf('normalizeStickyForCapture(options = {})')
 );
+
+assertPathExists('code/manifest.json', 'Chrome extension package candidate must include code/manifest.json');
+assertPathExists('code/worker.js', 'Chrome extension package candidate must include code/worker.js');
+assertPathExists('code/content/ContentAgent.js', 'Chrome extension package candidate must include content agent runtime');
+assertPathExists('code/capture/CaptureController.js', 'Chrome extension package candidate must include capture controller runtime');
+
+assert(
+  manifest.background?.service_worker,
+  'manifest must declare a service worker entry'
+);
+assertManifestReferencedFile(manifest.background.service_worker);
+if (manifest.options_ui?.page) {
+  assertManifestReferencedFile(manifest.options_ui.page);
+}
+if (manifest.action?.default_popup) {
+  assertManifestReferencedFile(manifest.action.default_popup);
+}
+for (const icon of Object.values(manifest.icons || {})) {
+  assertManifestReferencedFile(icon);
+}
+for (const icon of Object.values(manifest.action?.default_icon || {})) {
+  assertManifestReferencedFile(icon);
+}
+
+for (const ignoredPath of [
+  'node_modules/.package-audit-placeholder',
+  'project/tests/generated/package-audit-placeholder.png',
+  'project/tests/HTML Complicated Sites/package-audit-placeholder.html',
+  'project/tests/golden-baselines/real-sites/package-audit-placeholder.png',
+  'project/tests/golden-baselines/real-sites/package-audit-placeholder.jpg',
+  'project/tests/golden-baselines/real-sites/package-audit-placeholder.jpeg',
+  'project/tests/golden-baselines/real-sites/package-audit-placeholder.webp',
+  'project/tests/capture-results/package-audit/report.md',
+  'project/tests/real-site-qa-package-audit.md',
+  'project/tests/broad-package-audit.md',
+  'project/tests/wide-card-package-audit.md',
+  'project/tests/package-audit-research.md',
+  'project/tests/package-audit-research.mjs',
+  '.env.package-audit',
+  'package-audit.cookies.json',
+  'package-audit.zip',
+  'package-audit.crx',
+  'package-audit.pem',
+  'package-audit.key',
+  'package-audit.p12'
+]) {
+  assertIgnored(ignoredPath, `release package audit must keep ${ignoredPath} ignored`);
+}
+
+for (const requiredSourcePath of [
+  'code/manifest.json',
+  'code/worker.js',
+  'code/content/ContentAgent.js',
+  'code/capture/CaptureController.js',
+  'code/capture/PageProbe.js',
+  'project/tests/validate-extension.mjs'
+]) {
+  assertNotIgnored(requiredSourcePath, `release package audit must not ignore ${requiredSourcePath}`);
+}
 
 assertIncludes(
   captureDiagnosticsSource,

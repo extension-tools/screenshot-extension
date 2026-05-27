@@ -29,6 +29,27 @@ cd "/Users/dima/Projects/Screenshot Extension"
 node project/tests/real-site-runner.mjs
 ```
 
+## Release Package Audit
+
+Before preparing a Chrome Web Store package, run:
+
+```bash
+cd "/Users/dima/Projects/Screenshot Extension"
+npm run check
+```
+
+The release package candidate is the extension source under:
+
+```text
+code/**
+```
+
+Repository support files such as QA documentation, validation scripts, and review logs may be committed, but they must not be included in the Chrome Web Store package.
+
+`validate-extension.mjs` checks that local QA artifacts, saved HTML dumps, generated screenshots, golden baseline images, local archives, package files, and secret-like files are ignored. It also checks that required extension runtime files such as `code/manifest.json`, `code/worker.js`, icons referenced by the manifest, popup/options pages, and capture runtime files are not ignored.
+
+If an actual package dry-run or file-list command exists, run it and verify that the package contains only extension files. If no package file-list command exists, do not claim final package readiness yet; record the limitation and keep package file-list inspection as a required follow-up before publishing.
+
 ## Diagnostics Mode
 
 Normal user captures use `diagnosticsMode: "production"` and must store only the production diagnostics whitelist. Production diagnostics stay local, do not request new browser permissions, do not change `manifest.json`, and must not add telemetry, network upload, cookies, storage scraping, form-value collection, exact OS versions, or device identifiers.

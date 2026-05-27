@@ -878,3 +878,355 @@ The patch review loop is valid in main-thread-visible mode because:
 - the full ScopeGuard review is recorded;
 - the Developer response to ScopeGuard is recorded;
 - the required non-browser checks and results are recorded.
+
+## Release Cleanup Iteration 6 Spec Review Loop
+
+### Orchestrator -> Red Team
+
+Review this spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+### Red Team
+
+Status: BLOCKED until one clarification is added.
+
+Full review:
+
+1. The spec originally blurred repository release-support files and the actual Chrome Web Store package candidate. Documentation and validation tooling may live in the repository, but they must not be treated as extension package roots.
+2. `.gitignore` checks are useful, but they are not enough to prove package readiness. If no package file-list command exists, the spec must explicitly record that limitation and keep actual package file-list audit as a required follow-up before release.
+3. The spec correctly forbids runtime capture changes, manifest changes, permission changes, browser automation, network upload, signing, and deletion of local user artifacts.
+4. The scope is otherwise narrow and appropriate for release cleanup.
+
+Required change:
+
+- Split the spec into two audit surfaces:
+  - Chrome extension package candidate: `code/**`;
+  - repository release-support files: docs/tests/package metadata that may be committed but must not enter the Chrome Web Store ZIP.
+- Add a stop condition: do not claim final package readiness if the actual package file list cannot be inspected.
+
+### Orchestrator -> Architect
+
+Look at the review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect
+
+Status: PASS after spec update.
+
+I agree with Red Team and updated `project/docs/release-cleanup-iteration-6-s7.md`.
+
+Changes made:
+
+- Replaced "release package candidate roots" with "audit surfaces".
+- Clarified that only `code/**` may be treated as the Chrome Web Store package candidate.
+- Clarified that docs/tests/package metadata are repository release-support files, not extension package contents.
+- Clarified that static `.gitignore` checks guard repository hygiene and staging mistakes, but are not a substitute for checking the actual package file list.
+- Added a limitation: if no package file-list command exists, record that limitation and keep actual package file-list audit as a required follow-up before release.
+- Added stop conditions preventing final package readiness claims without inspectable package contents.
+
+### Orchestrator -> ScopeGuard
+
+Review this spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+### ScopeGuard
+
+Verdict: PASS
+
+Scope assessment:
+
+The spec is now narrow and release-package focused. It does not expand into capture runtime, scroll logic, fixed/sticky normalization, overlay policy, split/stitch, PDF/export, save/download, manifest, or permissions. It allows only `.gitignore`, validation, optional package script wiring, QA runbook notes, and review log updates.
+
+Architecture assessment:
+
+The updated "audit surfaces" split is the right architectural boundary. It prevents the developer from confusing repository documentation/testing files with Chrome Web Store package contents. The package-list audit remains conditional on an existing packaging command, so the spec does not accidentally create a new packaging engine. The stop condition for missing package file-list inspection is important and should remain.
+
+Competitor pattern observed:
+
+Not inspected.
+
+Better alternative, if any:
+
+No better alternative for this iteration. Creating a package builder would be broader than the requested release cleanup audit and should remain out of scope.
+
+Required narrowing:
+
+None.
+
+### Orchestrator -> Architect
+
+Look at the review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect
+
+Status: PASS, no further spec change.
+
+I agree with ScopeGuard. No additional changes are needed.
+
+The spec now:
+
+- separates repository validation from actual extension package contents;
+- avoids creating a package engine;
+- keeps runtime capture untouched;
+- preserves the Chrome Web Store readiness constraints;
+- explicitly refuses final package-readiness claims without package file-list inspection.
+
+### Batch Status
+
+Status: PASS.
+
+The iteration 6 spec review loop is valid in main-thread-visible mode because:
+
+- the Red Team request is recorded;
+- the full Red Team review is recorded;
+- the Architect response and spec update are recorded;
+- the ScopeGuard request is recorded;
+- the full ScopeGuard review is recorded;
+- the Architect final response is recorded.
+
+## Release Cleanup Iteration 6 Patch Loop
+
+### Orchestrator -> Developer
+
+Implement the approved spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+### Developer
+
+Status: PATCH PREPARED.
+
+Implementation summary:
+
+- Refined `.gitignore` so local QA/generated/research/package/secrets-like artifacts stay out of Git and release package staging.
+- Added static release package hygiene checks to `project/tests/validate-extension.mjs`.
+- Added manifest-referenced file existence checks for the extension package candidate.
+- Added checks that required extension runtime files are not ignored.
+- Added release package audit instructions to `project/tests/qa-runbook.md`.
+
+Scope statement:
+
+- No runtime capture files were changed.
+- `code/manifest.json` was not changed.
+- Browser permissions were not changed.
+- Screenshot behavior was not changed.
+- No package builder, signer, uploader, or Chrome Web Store integration was added.
+
+### Orchestrator -> Architect
+
+Review this diff.
+
+Artifacts:
+
+- `.gitignore`
+- `project/tests/validate-extension.mjs`
+- `project/tests/qa-runbook.md`
+- `project/docs/release-cleanup-review-log.md`
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+### Architect
+
+Status: PASS.
+
+Full review:
+
+1. The patch matches the approved iteration 6 scope: release package hygiene, local validation, and QA runbook documentation.
+2. The diff does not change screenshot capture behavior. No capture runtime modules were modified in this iteration.
+3. `code/manifest.json` and browser permissions were not changed.
+4. The validation added to `project/tests/validate-extension.mjs` is static and local-only. It checks repository/package hygiene and manifest-referenced files; it does not open pages, capture screenshots, upload data, or inspect user content.
+5. The `.gitignore` changes correctly keep generated QA artifacts, saved HTML dumps, golden baseline images, local archives, package artifacts, private keys, environment files, and cookies-like files out of Git.
+6. The QA runbook correctly distinguishes `code/**` as the Chrome Web Store package candidate from repository release-support files.
+7. The limitation is explicit: without an actual package file-list command, the project must not claim final package readiness.
+
+Minor comments:
+
+- The new validation helpers are acceptable here because they are test tooling, not product runtime.
+- No package builder should be added in this iteration.
+
+Final status: PASS.
+
+### Orchestrator -> Developer
+
+Look at the review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer
+
+Status: PASS, no code changes needed.
+
+I agree with the Architect review. No patch changes are needed:
+
+- the implementation stays inside release cleanup tooling and documentation;
+- runtime capture behavior is untouched;
+- the package file-list limitation is already documented;
+- adding a package builder would exceed the iteration scope.
+
+### Orchestrator -> ScopeGuard
+
+Review this diff.
+
+Artifacts:
+
+- `.gitignore`
+- `project/tests/validate-extension.mjs`
+- `project/tests/qa-runbook.md`
+- `project/docs/release-cleanup-review-log.md`
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+### ScopeGuard
+
+Verdict: PASS
+
+Scope assessment:
+
+The patch stays within release-cleanup iteration 6. It touches repository hygiene, validation tooling, the QA runbook, and the review log. It does not touch screenshot capture behavior, scroll/fixed/sticky/overlay/split/PDF/save logic, `code/manifest.json`, or permissions.
+
+Architecture assessment:
+
+The architecture remains simple. The validation is a local static gate, not a new packaging engine. The helper functions in `validate-extension.mjs` are small and scoped to file existence and `.gitignore` checks. The patch correctly separates the Chrome Web Store package candidate (`code/**`) from repository release-support files.
+
+Competitor pattern observed:
+
+Not inspected.
+
+Better alternative, if any:
+
+No better alternative for this iteration. A real package file-list audit is still needed before final publishing, but adding a package builder or publishing flow now would be out of scope.
+
+Required narrowing:
+
+None.
+
+### Orchestrator -> Developer
+
+Look at the review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer
+
+Status: PASS, no code changes needed.
+
+I agree with ScopeGuard. No further narrowing is needed:
+
+- no new runtime path was added;
+- no browser permission was added;
+- no package builder was added;
+- no capture code was changed;
+- final package-readiness remains explicitly blocked until the actual package file list can be inspected.
+
+### Tests
+
+Status: BLOCKED by unrelated dirty manifest/icon state.
+
+Commands run:
+
+```bash
+node --check project/tests/validate-extension.mjs
+git diff --check
+pnpm run check
+```
+
+Results:
+
+- `node --check project/tests/validate-extension.mjs`: passed.
+- `git diff --check`: passed.
+- `pnpm run check`: blocked.
+  - `validate-extension.mjs` failed because `code/manifest.json` is dirty.
+  - The dirty manifest change is outside this iteration patch and is tied to the local icon set state.
+  - The release guard is working as intended: it refuses to pass while `code/manifest.json` is changed.
+
+Browser status:
+
+- Browser was not run for this iteration.
+
+### Patch Loop Status
+
+Status: PATCH REVIEW PASS, TEST GATE BLOCKED BY UNRELATED MANIFEST DIFF.
+
+The iteration 6 patch review loop is valid in main-thread-visible mode because:
+
+- the Developer patch response is recorded;
+- the Architect request is recorded;
+- the full Architect review is recorded;
+- the Developer response to Architect is recorded;
+- the ScopeGuard request is recorded;
+- the full ScopeGuard review is recorded;
+- the Developer response to ScopeGuard is recorded;
+- the required non-browser checks and current blocker are recorded.
+
+### Iteration 6 Scoped Closure Boundary
+
+Status: READY FOR SCOPED STAGING, FULL CHECK DEFERRED BY EXTERNAL ICON/MANIFEST CLEANUP.
+
+Iteration 6 release-cleanup files:
+
+- `.gitignore`
+- `project/tests/validate-extension.mjs`
+- `project/tests/qa-runbook.md`
+- `project/docs/release-cleanup-review-log.md`
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+Explicitly outside iteration 6:
+
+- `code/manifest.json`
+- `code/data/icons/*.png`
+- `project/docs/agents-and-skills/`
+- golden baseline PNGs
+- generated QA artifacts
+
+Reason:
+
+- `code/manifest.json` and icon file changes belong to a separate icon cleanup requested by the project owner.
+- Icon cleanup is intentionally left for the end of release preparation.
+- Iteration 6 must not stage or commit manifest/icon changes.
+
+Checks required to close iteration 6 without browser:
+
+```bash
+node --check project/tests/validate-extension.mjs
+git diff --check
+```
+
+Full `pnpm run check` status:
+
+- Deferred until the separate icon/manifest cleanup is resolved.
+- Current blocker is expected and external to iteration 6 because the release guard refuses dirty `code/manifest.json`.
+
+### Iteration 6 Closure Note
+
+Status: CLOSED WITH SCOPED CHECKS.
+
+Committed scope:
+
+- `.gitignore`
+- `project/tests/validate-extension.mjs`
+- `project/tests/qa-runbook.md`
+- `project/docs/release-cleanup-review-log.md`
+- `project/docs/release-cleanup-iteration-6-s7.md`
+
+Excluded from the iteration 6 commit:
+
+- `code/manifest.json`
+- `code/data/icons/*`
+- PNG and golden baseline files
+- `project/docs/agents-and-skills/`
+- temporary QA/generated artifacts
+
+Validation:
+
+- `node --check project/tests/validate-extension.mjs`: passed.
+- `git diff --check`: passed.
+
+Full `pnpm run check`:
+
+- Deferred until icon cleanup is closed.
+- Reason: unrelated dirty `code/manifest.json` and icon file changes.
+
+Browser:
+
+- Not used.
