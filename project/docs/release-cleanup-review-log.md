@@ -138,6 +138,7 @@ Confirmed:
 | --- | --- | --- | --- | --- | --- | --- |
 | Release-cleanup iteration 4 patch | `code/capture/CaptureController.js`, `project/tests/validate-extension.mjs` | Developer | Architect | ScopeGuard | PASS | Architect reviewed the diff and confirmed it gates only QA-only `attachImageReadinessSummary(...)` packaging. Developer accepted with no changes. ScopeGuard reviewed the diff and confirmed no capture behavior, scroll, fixed/sticky, overlay, split/stitch, PDF, permissions, or `manifest.json` changes. Developer accepted with no changes. |
 | Release-cleanup iteration 4 checks | Non-browser release checks | Developer | Architect | ScopeGuard | PASS | `pnpm run check`, JavaScript syntax checks for changed JS files, `git diff --check`, and `node project/tests/targeted-risk-sites.mjs` passed. |
+| Release-cleanup iteration 4 closure | `77f5143 chore: gate QA diagnostics summaries` | Architect | Developer | ScopeGuard | PASS | Iteration 4 is closed as committed. The commit contains only `CaptureController.js`, `validate-extension.mjs`, `release-cleanup-iteration-4-s7.md`, and this review log. PNG icons, `project/docs/agents-and-skills/`, and the general `release-cleanup-s7.md` were intentionally left out of the commit. |
 
 ### Iteration 4 Patch Notes
 
@@ -149,6 +150,134 @@ Confirmed:
 - No forbidden runtime files changed.
 - No browser permissions changed.
 - `manifest.json` unchanged.
+
+### Iteration 4 Closure
+
+Status: closed.
+
+Commit: `77f5143 chore: gate QA diagnostics summaries`.
+
+Closed scope:
+
+- QA-only image readiness / sticky / repeated chrome summary packaging is gated by QA diagnostics mode.
+- Production capture behavior is unchanged.
+- Release validation protects the guard.
+- Main-thread-visible patch review was recorded.
+- Non-browser checks passed.
+
+Out of scope and intentionally not closed by this iteration:
+
+- icon PNG changes;
+- `project/docs/agents-and-skills/`;
+- general release-cleanup spec staging / commit decision;
+- further release-cleanup audits for other diagnostics construction costs.
+
+## Release Cleanup Checkpoint After Iteration 4
+
+Checkpoint status: iteration 4 is closed and committed.
+
+Last closed runtime commit:
+
+- `77f5143 chore: gate QA diagnostics summaries`
+
+Closed release-cleanup layers:
+
+- Production diagnostics mode and production diagnostics whitelist are established.
+- Internal QA runners explicitly request QA diagnostics mode.
+- Diagnostics storage and artifact boundaries are hardened.
+- QA-only image readiness, sticky, and repeated chrome summary packaging is gated by QA diagnostics mode.
+
+Current working-tree notes:
+
+- No uncommitted release-cleanup runtime JavaScript changes are expected after iteration 4 closure.
+- Icon PNG changes are intentionally outside release-cleanup.
+- `project/docs/agents-and-skills/` is intentionally outside release-cleanup.
+- `project/docs/release-cleanup-s7.md` is a general spec artifact and needs a separate staging / commit decision.
+- This review log contains checkpoint documentation changes after the iteration 4 commit.
+
+Release constraints still confirmed:
+
+- `manifest.json` unchanged.
+- No new browser permissions.
+- No telemetry, upload, cookie scraping, storage scraping, or form-value collection.
+- Diagnostics remain local-only.
+
+Recommended next release-cleanup step:
+
+- Start with a read-only audit for remaining QA-only diagnostics construction costs.
+- Do not write code until the audit names a concrete QA-only packaging block.
+- Keep `PageProbe.js` and `CaptureStepper.js` at default zero-line budget unless the audit finds a named candidate.
+
+## Release Cleanup Read-Only Audit After Iteration 4
+
+Audit date: 2026-05-27.
+
+Audit mode: read-only. No runtime files were changed by this audit.
+
+Audited files:
+
+- `code/capture/CaptureController.js`
+- `code/capture/CaptureDiagnostics.js`
+- `code/capture/CaptureStepper.js`
+- `code/capture/ContentAgentClient.js`
+- `code/content/FixedStickyNormalizer.js`
+- `code/capture/PageProbe.js`
+- `project/tests/validate-extension.mjs`
+
+Findings:
+
+1. `CaptureController` already gates `attachImageReadinessSummary(...)` behind QA diagnostics mode.
+2. Production diagnostics storage already uses the explicit whitelist in `CaptureDiagnostics.toProductionDiagnostics(...)`.
+3. The strongest next candidate is `CaptureStepper.analyzeRepeatedChrome(frames)`.
+   - It is built after capture frames are already collected.
+   - It is QA/report packaging, not a capture decision.
+   - It is not serialized into production diagnostics by the production whitelist.
+   - It can be gated with a boolean without changing scroll, capture, fixed/sticky, overlay, split/stitch, or export behavior.
+4. Deferred candidates:
+   - `FixedStickyNormalizer.collectChromeDiagnostics(...)` and `ContentAgentClient` chrome candidate aggregation are likely heavier, but they require threading a QA flag through content-agent calls and should be handled in a separate spec.
+   - `PageProbe` diagnostics are not a current patch target because capture plan and avoid ranges feed runtime decisions.
+
+Recommended next S7:
+
+- Gate repeated chrome summary construction at the `CaptureStepper` level.
+- Pass `includeQaDiagnostics` from `CaptureController` into `CaptureStepper`.
+- Return `repeatedChrome: null` in production mode.
+- Keep `summarizeTiming(...)` unchanged in this iteration.
+
+Allowed touch points for the next patch:
+
+- `code/capture/CaptureController.js`: pass `includeQaDiagnostics` into `new CaptureStepper(...)`.
+- `code/capture/CaptureStepper.js`: accept `includeQaDiagnostics = false` and guard only `analyzeRepeatedChrome(frames)`.
+- `project/tests/validate-extension.mjs`: add static release guard for the new gate.
+- `project/docs/release-cleanup-review-log.md`: record the patch review and checks.
+
+Forbidden touch points for the next patch:
+
+- `code/content/FixedStickyNormalizer.js`
+- `code/capture/ContentAgentClient.js`
+- `code/capture/PageProbe.js`
+- `manifest.json`
+- scroll target selection
+- fixed/sticky normalization behavior
+- overlay policy
+- split/stitch/tiling behavior
+- PDF/export behavior
+
+Expected diff budget for the next patch:
+
+- `CaptureController.js`: 1-5 lines.
+- `CaptureStepper.js`: 5-15 lines.
+- `validate-extension.mjs`: 10-40 lines.
+- this review log: 10-30 lines.
+
+Recommended non-browser checks for the next patch:
+
+- `pnpm run check`
+- `node --check code/capture/CaptureController.js`
+- `node --check code/capture/CaptureStepper.js`
+- `node --check project/tests/validate-extension.mjs`
+- `git diff --check`
+- `node project/tests/targeted-risk-sites.mjs`
 
 ## Iteration 4 Patch Review Visible Transcript Batch
 
@@ -429,3 +558,323 @@ The patch review loop is valid in main-thread-visible mode because:
 - the ScopeGuard review is recorded;
 - the Developer response to ScopeGuard is recorded;
 - the test result is recorded.
+
+## Iteration 5 Spec Review Visible Transcript Batch
+
+This section mirrors the main-thread-visible orchestration batch for `project/docs/release-cleanup-iteration-5-s7.md`.
+
+### Orchestrator -> Red Team
+
+Review this spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-5-s7.md`
+
+### Red Team
+
+Status: PASS with comments.
+
+Full review:
+
+The spec is narrow and matches the read-only audit result. It identifies one concrete QA-only packaging block, `CaptureStepper.analyzeRepeatedChrome(frames)`, and avoids using this small release-cleanup task as permission to touch broader capture behavior.
+
+What looks correct:
+
+- The spec gates one named post-capture summary, not runtime capture data.
+- It reuses the existing normalized `includeQaDiagnostics` boolean instead of creating a second diagnostics-mode interpreter.
+- It does not propose changes to `PageProbe`, `FixedStickyNormalizer`, `ContentAgentClient`, scroll target selection, fixed/sticky normalization, overlay policy, split/stitch, tiling, export, or storage whitelist.
+- It keeps QA mode behavior intact.
+- It makes browser testing unnecessary unless a behavior difference appears.
+- The hard-stop rules are appropriately strict.
+
+Non-blocking comments:
+
+1. The static validation should verify the call site, not only the presence of strings. A simple source guard is enough: `analyzeRepeatedChrome(frames)` should appear only inside the `this.includeQaDiagnostics ? ... : null` return branch or an equivalent explicit `if`.
+2. The spec should not ask the developer to compare production and QA visual output unless an existing non-browser test already does that. The current test list is fine because it focuses on release validation and syntax.
+3. The spec correctly leaves `summarizeTiming(...)` alone. That is important because timing may still be useful and is not the named audit target.
+
+Blocking issues:
+
+- None.
+
+Verdict:
+
+PASS with comments. No spec change is required unless the Architect wants to make the static-validation wording more explicit.
+
+### Orchestrator -> Architect
+
+Look at the Red Team review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect
+
+Status: PASS, no spec change.
+
+I agree with the Red Team review.
+
+I am not changing the spec because the current S7 already includes the needed static-validation intent:
+
+```text
+CaptureStepper calls analyzeRepeatedChrome(frames) only behind this.includeQaDiagnostics.
+```
+
+The Red Team suggestion is useful for the developer implementing `validate-extension.mjs`, but it does not require rewriting the spec. The spec already forbids broad behavior comparison and already leaves `summarizeTiming(...)` untouched.
+
+Result:
+
+- No changes to `project/docs/release-cleanup-iteration-5-s7.md`.
+- The developer should implement the static guard narrowly when writing the patch.
+
+### Orchestrator -> ScopeGuard
+
+Review this spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-5-s7.md`
+
+### ScopeGuard
+
+Verdict: PASS
+
+Scope assessment:
+
+The spec is tightly scoped to one QA-only packaging block: `CaptureStepper.analyzeRepeatedChrome(frames)`. It does not expand into page probing, content-agent aggregation, fixed/sticky normalization, scroll selection, overlay policy, split/stitch, PDF/export, save/download, or product behavior. The allowed touch points are minimal and justified.
+
+Architecture assessment:
+
+The proposed change is small and mechanical. Passing `includeQaDiagnostics` from `CaptureController` to `CaptureStepper` keeps one diagnostics-mode source of truth and avoids a second mode helper. Returning `repeatedChrome: null` in production is simpler than adding a new diagnostics layer or serializer branch. Keeping `summarizeTiming(...)` unchanged is the right narrowing.
+
+Competitor pattern observed:
+
+Not inspected.
+
+Better alternative, if any:
+
+No better alternative for this iteration. The tempting broader optimization would be to gate `FixedStickyNormalizer.collectChromeDiagnostics(...)`, but that requires threading a flag through content-agent calls and should remain a separate task, as the spec says.
+
+Required narrowing:
+
+None.
+
+### Orchestrator -> Architect
+
+Look at the review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect
+
+Status: PASS, no spec change.
+
+I agree with ScopeGuard.
+
+No changes are needed because the spec already:
+
+- limits the patch to one QA-only packaging block;
+- forbids touching `FixedStickyNormalizer`, `ContentAgentClient`, and `PageProbe`;
+- avoids new helpers and feature flags;
+- preserves screenshot behavior;
+- keeps the next heavier candidate as a separate future task.
+
+Result:
+
+- The iteration 5 S7 spec is approved for a developer patch.
+- The next developer step is to implement only the `includeQaDiagnostics` guard around `CaptureStepper.analyzeRepeatedChrome(frames)`, then run the listed non-browser checks.
+
+### Batch Status
+
+Status: PASS.
+
+The spec review loop is valid in main-thread-visible mode because:
+
+- the Red Team request is recorded;
+- the full Red Team review is recorded;
+- the Architect response to Red Team is recorded;
+- the ScopeGuard request is recorded;
+- the full ScopeGuard review is recorded;
+- the Architect response to ScopeGuard is recorded.
+
+## Release Cleanup Iteration 5 Patch Review Loop
+
+### Orchestrator -> Developer
+
+Implement this approved spec.
+
+Artifact:
+
+- `project/docs/release-cleanup-iteration-5-s7.md`
+
+Do not commit. Keep the patch narrow.
+
+### Developer
+
+Status: PASS.
+
+I implemented the approved iteration 5 patch narrowly.
+
+Changed files:
+
+- `code/capture/CaptureController.js`
+- `code/capture/CaptureStepper.js`
+- `project/tests/validate-extension.mjs`
+
+What changed:
+
+- `CaptureController` now passes the already-normalized `includeQaDiagnostics` boolean into `CaptureStepper`.
+- `CaptureStepper` constructor now accepts `includeQaDiagnostics = false` and stores it as a strict boolean.
+- `CaptureStepper.run()` now returns:
+  - `repeatedChrome: this.analyzeRepeatedChrome(frames)` only when QA diagnostics are enabled;
+  - `repeatedChrome: null` in production diagnostics mode.
+- `validate-extension.mjs` now has static checks that this production/QA gate stays in place.
+
+What did not change:
+
+- no scroll logic;
+- no fixed/sticky logic;
+- no overlay logic;
+- no split/stitch/tiling logic;
+- no capture behavior;
+- no manifest or permission changes;
+- no browser run.
+
+### Orchestrator -> Architect
+
+Review this diff.
+
+Artifacts:
+
+- `code/capture/CaptureController.js`
+- `code/capture/CaptureStepper.js`
+- `project/tests/validate-extension.mjs`
+
+### Architect
+
+Status: PASS.
+
+Diff review:
+
+- The change matches the approved S7 scope.
+- `CaptureController` remains the single owner of normalized diagnostics mode.
+- `CaptureStepper` receives only a boolean; it does not re-normalize diagnostics mode and does not create a parallel policy path.
+- The expensive repeated chrome summary is no longer built in production mode.
+- Returning `null` keeps the diagnostics shape explicit without inventing a second production object.
+- Screenshot behavior is unchanged because `frames`, `timing`, scrolling, drawing, stitching, and capture policy are untouched.
+- The static checks in `validate-extension.mjs` are acceptable and remain release-guard style checks, not product runtime logic.
+
+Non-blocking notes:
+
+- The string-based validation is intentionally simple. It is enough for this release cleanup guard and does not need a parser.
+- A future iteration may gate deeper content-agent diagnostics, but that is correctly out of scope here.
+
+Verdict: PASS.
+
+### Orchestrator -> Developer
+
+Look at the review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer
+
+Status: PASS, no code change.
+
+I agree with the Architect review.
+
+No patch changes are needed:
+
+- the patch already follows the approved touch points;
+- the note about future content-agent diagnostics belongs to a later iteration;
+- the current string-based validation is deliberately small and enough for this guard.
+
+### Orchestrator -> ScopeGuard
+
+Review this diff.
+
+Artifacts:
+
+- `code/capture/CaptureController.js`
+- `code/capture/CaptureStepper.js`
+- `project/tests/validate-extension.mjs`
+
+### ScopeGuard
+
+Verdict: PASS
+
+Scope assessment:
+
+The patch stays inside the requested iteration 5 scope. It only gates `CaptureStepper.analyzeRepeatedChrome(frames)` behind the existing QA diagnostics boolean and adds static validation. It does not touch capture behavior, scroll target selection, fixed/sticky normalization, overlay handling, image readiness, split boundaries, canvas tiling, PDF/export, storage, manifest, or permissions.
+
+Architecture assessment:
+
+The architecture is still small and mechanical. `CaptureController` owns diagnostics-mode derivation, and `CaptureStepper` receives a boolean instead of creating a new mode system. The production path now avoids building the repeated chrome diagnostics object. The fallback value `null` is explicit and cheap. No new helper, classifier, policy branch, or diagnostics engine was introduced.
+
+Competitor pattern observed:
+
+Not inspected.
+
+Better alternative, if any:
+
+No better alternative for this specific iteration. A broader cleanup could gate more QA diagnostics in content-agent paths, but that would be a separate iteration and should not be mixed into this patch.
+
+Required narrowing:
+
+None.
+
+### Orchestrator -> Developer
+
+Look at the review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer
+
+Status: PASS, no code change.
+
+I agree with ScopeGuard.
+
+No changes are needed:
+
+- the patch remains narrow;
+- no extra abstraction was added;
+- no site-specific or semantic logic was added;
+- no browser/capture behavior was touched.
+
+### Orchestrator -> Developer
+
+Run the required non-browser checks for this patch.
+
+### Developer
+
+Status: PASS.
+
+Checks run:
+
+- `node --check code/capture/CaptureController.js`
+- `node --check code/capture/CaptureStepper.js`
+- `node --check project/tests/validate-extension.mjs`
+- `git diff --check`
+- `pnpm run check`
+- `node project/tests/targeted-risk-sites.mjs`
+
+Results:
+
+- JavaScript syntax checks passed.
+- Diff whitespace check passed.
+- `pnpm run check` passed:
+  - `extension check ok`
+  - `sticky-cleanup-smoke: ok`
+- Targeted risk list check passed:
+  - `Targeted risk sites: 21`
+  - `Minimum required for beta gate: 15`
+
+No browser run was needed or performed.
+
+### Batch Status
+
+Status: PASS.
+
+The patch review loop is valid in main-thread-visible mode because:
+
+- the Developer implementation response is recorded;
+- the Architect review request is recorded;
+- the full Architect review is recorded;
+- the Developer response to Architect is recorded;
+- the ScopeGuard review request is recorded;
+- the full ScopeGuard review is recorded;
+- the Developer response to ScopeGuard is recorded;
+- the required non-browser checks and results are recorded.

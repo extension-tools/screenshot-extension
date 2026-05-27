@@ -219,7 +219,8 @@ self.CaptureController = class CaptureController {
         viewportCapture: this.viewportCapture,
         stitcher,
         prefs,
-        capturePolicy
+        capturePolicy,
+        includeQaDiagnostics
       });
 
       this.chrome.action.setBadgeText({tabId: tab.id, text: 'R'});

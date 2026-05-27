@@ -144,8 +144,33 @@ assertIncludes(
 );
 assertIncludes(
   captureControllerSource,
+  'capturePolicy,\n        includeQaDiagnostics',
+  'CaptureController must pass includeQaDiagnostics to QA-only downstream diagnostics owners'
+);
+assertIncludes(
+  captureControllerSource,
   'if (includeQaDiagnostics) {\n        this.captureDiagnostics.attachImageReadinessSummary',
   'CaptureController must build QA-only image readiness summaries only in QA diagnostics mode'
+);
+assertIncludes(
+  captureStepperSource,
+  'includeQaDiagnostics = false',
+  'CaptureStepper must default QA-only diagnostics to disabled'
+);
+assertIncludes(
+  captureStepperSource,
+  'this.includeQaDiagnostics = includeQaDiagnostics === true',
+  'CaptureStepper must store includeQaDiagnostics as a boolean'
+);
+assertIncludes(
+  captureStepperSource,
+  'repeatedChrome: this.includeQaDiagnostics ?',
+  'CaptureStepper must gate repeated chrome diagnostics behind includeQaDiagnostics'
+);
+assertIncludes(
+  captureStepperSource,
+  'this.analyzeRepeatedChrome(frames) :\n        null',
+  'CaptureStepper must return null repeatedChrome in production diagnostics mode'
 );
 assertIncludes(
   captureControllerSource,

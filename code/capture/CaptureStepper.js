@@ -1,5 +1,14 @@
 self.CaptureStepper = class CaptureStepper {
-  constructor({chrome, pageProbe, contentAgent, viewportCapture, stitcher, prefs, capturePolicy = null}) {
+  constructor({
+    chrome,
+    pageProbe,
+    contentAgent,
+    viewportCapture,
+    stitcher,
+    prefs,
+    capturePolicy = null,
+    includeQaDiagnostics = false
+  }) {
     this.chrome = chrome;
     this.pageProbe = pageProbe;
     this.contentAgent = contentAgent;
@@ -7,6 +16,7 @@ self.CaptureStepper = class CaptureStepper {
     this.stitcher = stitcher;
     this.prefs = prefs;
     this.capturePolicy = capturePolicy;
+    this.includeQaDiagnostics = includeQaDiagnostics === true;
   }
 
   async run({tab, plan, startFrameIndex = 0}) {
@@ -119,7 +129,9 @@ self.CaptureStepper = class CaptureStepper {
 
     return {
       frames,
-      repeatedChrome: this.analyzeRepeatedChrome(frames),
+      repeatedChrome: this.includeQaDiagnostics ?
+        this.analyzeRepeatedChrome(frames) :
+        null,
       timing: this.summarizeTiming(frames, Date.now() - runStarted)
     };
   }
