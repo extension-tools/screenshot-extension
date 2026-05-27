@@ -44,6 +44,7 @@ self.CaptureController = class CaptureController {
       'qaDiagnostics': false
     });
     const diagnosticsMode = this.captureDiagnostics.normalizeDiagnosticsMode(prefs);
+    const includeQaDiagnostics = diagnosticsMode === 'qa';
     const platformInfo = await this.readPlatformInfo();
     prefs.delay = Math.max(
       prefs.delay,
@@ -225,10 +226,14 @@ self.CaptureController = class CaptureController {
       diagnostics.stepper = await timePhase('capture_stepper', () => stepper.run({tab, plan}), {
         framesPlanned: plan.total
       });
-      this.captureDiagnostics.attachImageReadinessSummary(diagnosticsV2, diagnostics);
+      if (includeQaDiagnostics) {
+        this.captureDiagnostics.attachImageReadinessSummary(diagnosticsV2, diagnostics);
+      }
     }
     catch (error) {
-      this.captureDiagnostics.attachImageReadinessSummary(diagnosticsV2, diagnostics);
+      if (includeQaDiagnostics) {
+        this.captureDiagnostics.attachImageReadinessSummary(diagnosticsV2, diagnostics);
+      }
       this.captureDiagnostics.markFailure(diagnosticsV2, error);
       error.captureDiagnostics = diagnosticsV2;
       error.legacyDiagnostics = diagnostics;

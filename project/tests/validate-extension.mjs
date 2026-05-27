@@ -139,6 +139,16 @@ assertIncludes(
 );
 assertIncludes(
   captureControllerSource,
+  "const includeQaDiagnostics = diagnosticsMode === 'qa'",
+  'CaptureController must derive includeQaDiagnostics from the normalized diagnostics mode'
+);
+assertIncludes(
+  captureControllerSource,
+  'if (includeQaDiagnostics) {\n        this.captureDiagnostics.attachImageReadinessSummary',
+  'CaptureController must build QA-only image readiness summaries only in QA diagnostics mode'
+);
+assertIncludes(
+  captureControllerSource,
   'serializeForStorage',
   'CaptureController must store shaped diagnostics instead of raw verbose diagnostics by default'
 );
