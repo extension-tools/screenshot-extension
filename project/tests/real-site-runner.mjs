@@ -2434,6 +2434,7 @@ const runSite = async ({site, viewport}) => {
 
     await extensionPage.evaluate(mask => chrome.storage.local.set({
       saveAs: false,
+      diagnosticsMode: 'qa',
       mask
     }), `real-site-${slug(name)}-${Date.now()}`);
 

@@ -29,6 +29,12 @@ cd "/Users/dima/Projects/Screenshot Extension"
 node project/tests/real-site-runner.mjs
 ```
 
+## Diagnostics Mode
+
+Normal user captures use `diagnosticsMode: "production"` and must store only the production diagnostics whitelist. Production diagnostics stay local, do not request new browser permissions, do not change `manifest.json`, and must not add telemetry, network upload, cookies, storage scraping, form-value collection, exact OS versions, or device identifiers.
+
+Fixture and real-site QA runners explicitly set `diagnosticsMode: "qa"`. QA mode may keep verbose local diagnostics and write local `report.md` files under `project/tests` or the active review folder. Treat `report.md`, `summary.md`, and `fs.writeFile` outputs as QA artifacts only; they must not be used as evidence that production extension storage may keep verbose diagnostics.
+
 Targeted real-site run:
 
 ```bash

@@ -1,5 +1,5 @@
 self.CaptureDiagnostics = class CaptureDiagnostics {
-  create({tab, prefs}) {
+  create({tab, prefs, platformInfo = null}) {
     return {
       version: 2,
       status: 'running',
@@ -19,6 +19,9 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
         stabilizationTimeout: prefs.stabilizationTimeout,
         lazyWarmupEnabled: prefs.lazyWarmupEnabled,
         lazyWarmupTimeout: prefs.lazyWarmupTimeout
+      },
+      platform: {
+        os: this.normalizePlatformOs(platformInfo?.os)
       },
       page: null,
       output: null,
@@ -40,6 +43,95 @@ self.CaptureDiagnostics = class CaptureDiagnostics {
       errorMessage: null,
       completedAt: null
     };
+  }
+
+  normalizeDiagnosticsMode(options = {}) {
+    if (options?.diagnosticsMode === 'qa') {
+      return 'qa';
+    }
+
+    if (options?.qaDiagnostics === true) {
+      return 'qa';
+    }
+
+    return 'production';
+  }
+
+  normalizePlatformOs(os) {
+    const normalized = String(os || '').toLowerCase();
+    const allowed = new Set(['mac', 'win', 'linux', 'cros', 'android', 'openbsd']);
+
+    return allowed.has(normalized) ? normalized : null;
+  }
+
+  serializeForStorage({mode, strategy, diagnostics, captureDiagnostics}) {
+    const diagnosticsMode = this.normalizeDiagnosticsMode({diagnosticsMode: mode});
+
+    if (diagnosticsMode === 'qa') {
+      return {
+        version: 2,
+        mode: strategy?.mode || null,
+        strategy,
+        diagnostics: diagnostics || {},
+        capture: captureDiagnostics || null,
+        generatedAt: new Date().toISOString()
+      };
+    }
+
+    return this.toProductionDiagnostics(captureDiagnostics);
+  }
+
+  toProductionDiagnostics(diagnostics) {
+    if (!diagnostics) {
+      return null;
+    }
+
+    const exportFiles = Array.isArray(diagnostics.export?.files) ?
+      diagnostics.export.files :
+      [];
+    const page = diagnostics.page || {};
+    const output = diagnostics.output || {};
+    const outputFileCount = this.normalizeOutputFileCount({exportFiles, output});
+
+    return {
+      captureId: diagnostics.captureId || null,
+      status: diagnostics.status || null,
+      failureReason: diagnostics.failureReason || null,
+      errorMessage: diagnostics.errorMessage || null,
+      startedAt: diagnostics.startedAt || null,
+      completedAt: diagnostics.completedAt || null,
+      durationMs: Number.isFinite(diagnostics.timing?.totalMs) ? diagnostics.timing.totalMs : null,
+      platformOs: this.normalizePlatformOs(diagnostics.platform?.os),
+      url: diagnostics.tab?.url || null,
+      title: diagnostics.tab?.title || null,
+      viewport: {
+        width: Number.isFinite(page.viewportWidth) ? page.viewportWidth : null,
+        height: Number.isFinite(page.viewportHeight) ? page.viewportHeight : null,
+        devicePixelRatio: Number.isFinite(page.dpr) ? page.dpr : null
+      },
+      outputStrategy: output.strategy || null,
+      outputFileCount,
+      outputDimensions: {
+        width: Number.isFinite(output.bitmapWidth) ? output.bitmapWidth : null,
+        height: Number.isFinite(output.bitmapHeight) ? output.bitmapHeight : null
+      }
+    };
+  }
+
+  normalizeOutputFileCount({exportFiles, output}) {
+    if (exportFiles.length) {
+      return exportFiles.length;
+    }
+
+    if (Number.isFinite(output?.tileCount) && output.tileCount > 0) {
+      return output.tileCount;
+    }
+
+    if (output?.strategy === 'single-canvas') {
+      return 1;
+    }
+
+    return null;
   }
 
   recordTiming(diagnostics, name, elapsedMs, extra = {}) {

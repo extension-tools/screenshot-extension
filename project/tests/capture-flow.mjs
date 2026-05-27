@@ -2454,6 +2454,7 @@ const runCase = async ({testCase, origin}) => {
 
     await extensionPage.evaluate(({mask, storageOverrides}) => chrome.storage.local.set({
       saveAs: false,
+      diagnosticsMode: 'qa',
       mask,
       ...(storageOverrides || {})
     }), {

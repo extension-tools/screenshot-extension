@@ -39,8 +39,12 @@ self.CaptureController = class CaptureController {
       'lazyWarmupEnabled': true,
       'lazyWarmupTimeout': 3500,
       'lazyWarmupStepDelay': 100,
-      'lazyWarmupStabilizationTimeout': 500
+      'lazyWarmupStabilizationTimeout': 500,
+      'diagnosticsMode': 'production',
+      'qaDiagnostics': false
     });
+    const diagnosticsMode = this.captureDiagnostics.normalizeDiagnosticsMode(prefs);
+    const platformInfo = await this.readPlatformInfo();
     prefs.delay = Math.max(
       prefs.delay,
       1000 / this.chrome.tabs.MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND || 2
@@ -58,7 +62,8 @@ self.CaptureController = class CaptureController {
       imageReadiness: {},
       quirks: {}
     };
-    const diagnosticsV2 = this.captureDiagnostics.create({tab, prefs});
+    const diagnosticsV2 = this.captureDiagnostics.create({tab, prefs, platformInfo});
+    diagnosticsV2.diagnosticsMode = diagnosticsMode;
     const timePhase = async (name, action, extra = {}) => {
       const started = Date.now();
       try {
@@ -269,7 +274,8 @@ self.CaptureController = class CaptureController {
           files: await timePhase('render_output_files', () => stitcher.toFiles()),
           strategy,
           diagnostics,
-          diagnosticsV2
+          diagnosticsV2,
+          diagnosticsMode
         };
       }
 
@@ -278,7 +284,8 @@ self.CaptureController = class CaptureController {
         blob: await timePhase('render_output_blob', () => stitcher.toBlob()),
         strategy,
         diagnostics,
-        diagnosticsV2
+        diagnosticsV2,
+        diagnosticsMode
       };
     }
     catch (error) {
@@ -387,14 +394,33 @@ self.CaptureController = class CaptureController {
   async storeCaptureDiagnostics(result) {
     await this.chrome.storage.local.set({
       lastCaptureDiagnostics: {
-        version: 2,
-        mode: result.mode,
-        strategy: result.strategy,
-        diagnostics: result.diagnostics,
-        capture: result.diagnosticsV2,
-        generatedAt: new Date().toISOString()
+        ...this.captureDiagnostics.serializeForStorage({
+          mode: result.diagnosticsMode || result.diagnosticsV2?.diagnosticsMode,
+          strategy: result.strategy,
+          diagnostics: result.diagnostics,
+          captureDiagnostics: result.diagnosticsV2
+        })
       }
     });
+  }
+
+  async readPlatformInfo() {
+    if (!this.chrome?.runtime?.getPlatformInfo) {
+      return null;
+    }
+
+    try {
+      return await new Promise(resolve => {
+        const maybePromise = this.chrome.runtime.getPlatformInfo(info => resolve(info || null));
+
+        if (maybePromise && typeof maybePromise.then === 'function') {
+          maybePromise.then(info => resolve(info || null)).catch(() => resolve(null));
+        }
+      });
+    }
+    catch (_error) {
+      return null;
+    }
   }
 
   async probeViewportBlockingFallback(tab, page, plan, capturePolicy, prefs = {}) {

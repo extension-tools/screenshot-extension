@@ -11,6 +11,20 @@ const readJson = file => JSON.parse(fs.readFileSync(path.join(codeRoot, file), '
 
 readJson('manifest.json');
 
+try {
+  execFileSync('git', ['diff', '--quiet', '--', 'code/manifest.json'], {
+    cwd: repoRoot,
+    stdio: 'pipe'
+  });
+  execFileSync('git', ['diff', '--cached', '--quiet', '--', 'code/manifest.json'], {
+    cwd: repoRoot,
+    stdio: 'pipe'
+  });
+}
+catch (_error) {
+  throw new Error('release cleanup validation must not change code/manifest.json');
+}
+
 for (const dirent of fs.readdirSync(path.join(codeRoot, '_locales'), {withFileTypes: true})) {
   if (dirent.isDirectory()) {
     readJson(path.join('_locales', dirent.name, 'messages.json'));
@@ -102,6 +116,222 @@ const prepareCaptureSource = contentAgentSource.slice(
   contentAgentSource.indexOf('prepareCapture(options = {})'),
   contentAgentSource.indexOf('normalizeStickyForCapture(options = {})')
 );
+
+assertIncludes(
+  captureDiagnosticsSource,
+  'normalizeDiagnosticsMode',
+  'CaptureDiagnostics must normalize production and QA diagnostics modes at a single boundary'
+);
+assertIncludes(
+  captureDiagnosticsSource,
+  'toProductionDiagnostics',
+  'CaptureDiagnostics must expose a production diagnostics whitelist'
+);
+assertIncludes(
+  captureDiagnosticsSource,
+  'normalizePlatformOs',
+  'CaptureDiagnostics must normalize platformOs to a coarse allowed value'
+);
+assertIncludes(
+  captureControllerSource,
+  "'diagnosticsMode': 'production'",
+  'CaptureController must default user captures to production diagnostics mode'
+);
+assertIncludes(
+  captureControllerSource,
+  'serializeForStorage',
+  'CaptureController must store shaped diagnostics instead of raw verbose diagnostics by default'
+);
+assertIncludes(
+  runnerSource,
+  "diagnosticsMode: 'qa'",
+  'real-site runner must explicitly enable QA diagnostics for internal runs'
+);
+assertIncludes(
+  captureFlowSource,
+  "diagnosticsMode: 'qa'",
+  'capture-flow runner must explicitly enable QA diagnostics for fixture assertions'
+);
+{
+  const storeCaptureDiagnosticsStart = captureControllerSource.indexOf('async storeCaptureDiagnostics(result)');
+  const storeCaptureDiagnosticsEnd = captureControllerSource.indexOf('async readPlatformInfo()');
+  const storeCaptureDiagnosticsSource = captureControllerSource.slice(
+    storeCaptureDiagnosticsStart,
+    storeCaptureDiagnosticsEnd
+  );
+
+  assert(
+    storeCaptureDiagnosticsStart !== -1 && storeCaptureDiagnosticsEnd > storeCaptureDiagnosticsStart,
+    'CaptureController must keep diagnostics storage in a small storeCaptureDiagnostics method'
+  );
+  assertIncludes(
+    storeCaptureDiagnosticsSource,
+    'lastCaptureDiagnostics',
+    'CaptureController.storeCaptureDiagnostics must own the production diagnostics storage key'
+  );
+  assertIncludes(
+    storeCaptureDiagnosticsSource,
+    'serializeForStorage',
+    'CaptureController.storeCaptureDiagnostics must write only serialized diagnostics'
+  );
+  for (const productionRuntimeSource of [
+    ['CaptureController', captureControllerSource],
+    ['CaptureDiagnostics', captureDiagnosticsSource],
+    ['CaptureStore', captureStoreSource]
+  ]) {
+    const [name, source] = productionRuntimeSource;
+
+    assertNotIncludes(
+      source,
+      'debugDiagnostics',
+      `${name} must not introduce a production debugDiagnostics storage path`
+    );
+    assertNotIncludes(
+      source,
+      'qaReport',
+      `${name} must not introduce a production QA report storage path`
+    );
+    assertNotIncludes(
+      source,
+      'report.md',
+      `${name} must not write QA report.md artifacts from the production extension runtime`
+    );
+    assertNotIncludes(
+      source,
+      'writeFile',
+      `${name} must not use file-system report writes in the production extension runtime`
+    );
+  }
+  assertNotIncludes(
+    captureStoreSource,
+    'lastCaptureDiagnostics',
+    'CaptureStore must stay focused on downloads and must not own diagnostics storage'
+  );
+  assertIncludes(
+    captureFlowSource,
+    'report.md',
+    'capture-flow may write report.md only as a QA runner artifact'
+  );
+  assertIncludes(
+    runnerSource,
+    'report.md',
+    'real-site runner may write report.md only as a QA runner artifact'
+  );
+}
+
+{
+  const CaptureDiagnostics = loadSelfClass(captureDiagnosticsSource, 'CaptureDiagnostics');
+  const diagnostics = new CaptureDiagnostics();
+  const verboseCapture = {
+    status: 'success',
+    startedAt: '2026-05-26T00:00:00.000Z',
+    completedAt: '2026-05-26T00:00:01.000Z',
+    tab: {
+      url: 'https://example.com',
+      title: 'Example'
+    },
+    platform: {
+      os: 'mac'
+    },
+    page: {
+      viewportWidth: 1200,
+      viewportHeight: 900,
+      dpr: 2
+    },
+    output: {
+      strategy: 'single-canvas',
+      bitmapWidth: 2400,
+      bitmapHeight: 3600
+    },
+    timing: {
+      totalMs: 1234
+    },
+    export: {
+      files: [{filename: 'example.png'}]
+    },
+    capturePlan: {
+      avoidRanges: [{yStartCssPx: 10, yEndCssPx: 20}]
+    },
+    scrollTarget: {
+      diagnostics: {
+        selector: '.internal'
+      }
+    }
+  };
+  const productionStored = diagnostics.serializeForStorage({
+    mode: 'production',
+    strategy: {mode: 'single-canvas'},
+    diagnostics: {stepper: {frames: [{frameIndex: 0}]}},
+    captureDiagnostics: verboseCapture
+  });
+  const qaStored = diagnostics.serializeForStorage({
+    mode: 'qa',
+    strategy: {mode: 'single-canvas'},
+    diagnostics: {stepper: {frames: [{frameIndex: 0}]}},
+    captureDiagnostics: verboseCapture
+  });
+  const productionKeys = Object.keys(productionStored).sort();
+  const allowedProductionKeys = [
+    'captureId',
+    'completedAt',
+    'durationMs',
+    'errorMessage',
+    'failureReason',
+    'outputDimensions',
+    'outputFileCount',
+    'outputStrategy',
+    'platformOs',
+    'startedAt',
+    'status',
+    'title',
+    'url',
+    'viewport'
+  ].sort();
+
+  assert(
+    JSON.stringify(productionKeys) === JSON.stringify(allowedProductionKeys),
+    'production stored diagnostics must contain only the release whitelist'
+  );
+  assert(
+    productionStored.platformOs === 'mac',
+    'production stored diagnostics may include only coarse platformOs'
+  );
+  assert(
+    diagnostics.toProductionDiagnostics({
+      ...verboseCapture,
+      export: {files: []},
+      output: {
+        strategy: 'single-canvas',
+        bitmapWidth: 2400,
+        bitmapHeight: 3600
+      }
+    }).outputFileCount === 1,
+    'single-canvas production diagnostics must report one output file even before export file details are attached'
+  );
+  assertNotIncludes(
+    JSON.stringify(productionStored),
+    'avoidRanges',
+    'production stored diagnostics must not serialize capturePlan.avoidRanges'
+  );
+  assertNotIncludes(
+    JSON.stringify(productionStored),
+    'selector',
+    'production stored diagnostics must not serialize selector-like diagnostics'
+  );
+  assert(
+    qaStored.capture?.capturePlan?.avoidRanges?.length === 1 &&
+      qaStored.diagnostics?.stepper?.frames?.length === 1,
+    'QA stored diagnostics must preserve verbose diagnostics for internal runs'
+  );
+  assert(
+    diagnostics.normalizeDiagnosticsMode({qaDiagnostics: true}) === 'qa',
+    'qaDiagnostics must remain a legacy alias for diagnosticsMode: qa'
+  );
+  assert(
+    diagnostics.normalizePlatformOs('darwin') === null,
+    'exact or unsupported platform values must not be serialized as platformOs'
+  );
+}
 
 assertIncludes(
   pageProbeSource,
