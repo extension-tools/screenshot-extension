@@ -27,6 +27,11 @@ project/tests/*research*.md
 project/tests/*research*.mjs
 project/tests/wide-card-headless-research.mjs
 
+# Competitor research is local investigation material, not release package input.
+project/tests/competitor-*/
+project/tests/competitor-*.md
+project/tests/competitor-*.mjs
+
 # Rendered documentation exports are generated review artifacts.
 # Keep the Markdown source of truth in Git instead.
 project/docs/*.pdf
