@@ -10,9 +10,9 @@ Replace the inherited extension icon set with the provided product artwork.
 
 ## Requirements
 
-- Generate PNG assets for all manifest icon sizes.
-- Replace `code/data/icons/16.png`, `20.png`, `24.png`, `32.png`, `48.png`, `64.png`, `128.png`, `256.png`, and `512.png`.
-- Replace `code/data/icons/entire.png` to avoid stale prototype art.
+- Generate PNG assets for the manifest icon sizes used by the extension.
+- Replace `code/data/icons/16.png`, `32.png`, `48.png`, `64.png`, and `128.png`.
+- Remove stale non-manifest icon assets, including `20.png`, `24.png`, `256.png`, `512.png`, and `entire.png`.
 - Add `action.default_icon` in `code/manifest.json`.
 - Keep paths relative to the extension root.
 
@@ -29,4 +29,3 @@ The source image is:
 - Static check: `project/tests/validate-extension.mjs`.
 - Manifest parse check.
 - Manual check after extension reload in `chrome://extensions`.
-
