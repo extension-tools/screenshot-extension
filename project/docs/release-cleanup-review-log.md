@@ -1230,3 +1230,410 @@ Full `pnpm run check`:
 Browser:
 
 - Not used.
+
+## Release Cleanup Iteration 7 Spec Review
+
+### Orchestrator -> ScopeGuard
+
+Review this S7 spec: `project/docs/release-cleanup-iteration-7-s7.md`.
+
+### ScopeGuard -> Orchestrator
+
+Verdict: PASS
+
+Scope assessment:
+The spec remains within the requested release-cleanup scope: diagnostics performance cleanup without screenshot behavior changes. It explicitly forbids changes to `manifest.json`, browser permissions, icons, and scroll/fixed/sticky/split/export behavior. `PageProbe.js` is correctly treated as phase 2-only and proof-gated.
+
+Architecture assessment:
+The approach is narrow and correct. It reuses existing `diagnosticsMode`, `includeQaDiagnostics`, `CaptureDiagnostics.serializeForStorage()`, and `toProductionDiagnostics()` instead of creating a new diagnostics path, serializer, feature flag, or profiler. The spec correctly separates runtime data that affects capture from report-only diagnostics.
+
+Competitor pattern observed:
+Not inspected
+
+Better alternative, if any:
+No better alternative for this iteration. A broader `PageProbe` or content-agent rewrite would be riskier and unnecessary for the final release-cleanup tail.
+
+Required narrowing:
+No additional narrowing required. Implementation caution: if the developer cannot prove a computation is report-only, leave it unchanged in this iteration.
+
+Status: PASS with one non-blocking implementation caution.
+
+### Orchestrator -> Architect
+
+Review the ScopeGuard feedback above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect -> Orchestrator
+
+Accepted the ScopeGuard caution and updated `project/docs/release-cleanup-iteration-7-s7.md` to state:
+
+> If the developer cannot prove that a computation is report-only, leave it unchanged in this iteration.
+
+Resulting status: PASS with clarification applied.
+
+### Orchestrator -> Red Team
+
+Review `project/docs/release-cleanup-iteration-7-s7.md`.
+
+Context: this is the S7 spec for release-cleanup iteration 7. It should keep screenshot behavior unchanged, keep manifest and browser permissions untouched, and avoid adding a new diagnostics architecture.
+
+### Red Team -> Orchestrator
+
+Verdict: WARN
+
+Findings:
+
+1. The spec relies on proving that a computation is report-only, but it did not define the proof procedure.
+2. `PageProbe.js` was still allowed as a phase-2/proof-gated touch point, which is too risky for this final cleanup iteration.
+3. Tests checked storage/whitelist behavior but did not clearly require proof that selected QA-only construction is not called in production.
+4. The spec mixed construction, attachment, and serialization language.
+5. Production and QA checks should validate the same QA-only object path where possible.
+6. `capture-flow.mjs` should be avoided unless existing non-behavior checks are not enough.
+7. New timing measurements in production should not be added.
+8. QA reports and QA field names must remain stable.
+9. Browser command names should not hardcode possibly wrong package-manager commands.
+10. The existing diagnostics mode should not be called a new feature flag.
+
+Required changes:
+
+1. Remove `PageProbe.js` from iteration 7 allowed touch points.
+2. Add a proof procedure for report-only computations.
+3. Separate construction, attachment, and serialization in the spec.
+4. Require a check that production does not build a selected QA-only object where feasible.
+5. Replace flag wording with diagnostics-mode wording.
+6. Avoid hardcoded browser command names.
+
+Final recommendation:
+
+WARN, close to PASS. Apply the required changes before handing the spec to the developer.
+
+### Orchestrator -> Architect
+
+Look at the Red Team review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect -> Orchestrator
+
+Accepted the Red Team review and updated `project/docs/release-cleanup-iteration-7-s7.md`.
+
+Applied changes:
+
+- removed `PageProbe.js` from allowed touch points;
+- added `PageProbe.js` to forbidden touch points;
+- changed the PageProbe section to "out of scope";
+- added a proof procedure before gating report-only construction;
+- explicitly separated construction, attachment, and serialization;
+- added a rule that QA-only construction may be skipped only after report-only proof;
+- changed "flag on/off" wording to diagnostics mode production/qa wording;
+- replaced hardcoded browser commands with neutral existing-command wording;
+- kept no new feature flags, no new production fields, and no capture behavior changes.
+
+Resulting status: PASS after accepted Red Team changes.
+
+## Release Cleanup Iteration 7 Re-Review After Owner Changes
+
+### Orchestrator -> ScopeGuard
+
+Review the updated S7 spec after the Architect changes: `project/docs/release-cleanup-iteration-7-s7.md`.
+
+### ScopeGuard -> Orchestrator
+
+Verdict: PASS
+
+Scope assessment:
+The updated spec stays within the release-cleanup iteration 7 scope. It still targets only QA-only diagnostics construction and attachment in production mode. The added proof procedure narrows the task rather than expanding it. The spec explicitly keeps screenshot behavior, scroll target selection, fixed/sticky handling, overlay/modal policy, split/stitch/tiling, export behavior, browser permissions, `manifest.json`, and icons out of scope.
+
+Architecture assessment:
+The updated spec is cleaner than the previous version. Removing `PageProbe.js` from allowed touch points is the right narrowing because it avoids turning this final cleanup into a broader probe/performance refactor. The construction/attachment/serialization split is useful and does not create a new diagnostics architecture. Reusing `diagnosticsMode`, `includeQaDiagnostics`, and existing `CaptureDiagnostics` boundaries remains the simplest path.
+
+Competitor pattern observed:
+Not inspected
+
+Better alternative, if any:
+No better alternative for this iteration. The only caution is implementation-level: if a candidate object has any read path into capture behavior, leave it unchanged and do not optimize it in iteration 7.
+
+Required narrowing:
+No further narrowing required.
+
+Status: PASS.
+
+### Orchestrator -> Architect
+
+Look at the ScopeGuard re-review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect -> Orchestrator
+
+I agree with the ScopeGuard re-review.
+
+No spec change is needed:
+
+- ScopeGuard confirmed the update narrowed the task.
+- ScopeGuard confirmed `PageProbe.js` is now correctly out of scope.
+- ScopeGuard confirmed the proof procedure is useful and does not create a new diagnostics architecture.
+- ScopeGuard's remaining caution is already covered by the spec rule: if a computation cannot be proven report-only, leave it unchanged.
+
+Resulting status: PASS with no additional spec changes.
+
+### Orchestrator -> Red Team
+
+Review the updated S7 spec after the Architect changes: `project/docs/release-cleanup-iteration-7-s7.md`.
+
+### Red Team -> Orchestrator
+
+Verdict: PASS
+
+Findings:
+
+1. The previous missing proof procedure is now covered. The spec requires searching all reads with `rg` and leaving the computation unchanged if it feeds capture policy, readiness, split/stitch/tiling, scroll target selection, fixed/sticky handling, output planning, or save/download behavior.
+2. `PageProbe.js` is now forbidden for iteration 7. This removes the biggest over-expansion risk from the previous draft.
+3. The spec now separates construction, attachment, and serialization. That makes it harder for the developer to claim storage shaping is enough when construction still happens in production.
+4. The spec no longer treats diagnostics mode as a new feature flag. It correctly reuses existing `diagnosticsMode === "qa"`.
+5. The test section no longer hardcodes possibly wrong browser run commands and keeps browser checks optional because capture behavior must not change.
+6. The diff budget now makes `PageProbe.js` zero lines and requires re-review if any forbidden touch point changes.
+
+Residual risks:
+
+- The implementation can still accidentally change behavior if the developer misclassifies a runtime object as report-only. The proof procedure and stop condition are the right mitigation.
+- The spec allows `capture-flow.mjs` only if existing fixtures can check diagnostics without behavior changes. That is acceptable but should be watched during implementation.
+
+Required changes:
+
+No required changes.
+
+Final recommendation:
+
+PASS. The spec is ready for developer implementation, with the important constraint that any uncertain computation must be left unchanged.
+
+### Orchestrator -> Architect
+
+Look at the Red Team re-review above. If you agree that anything should be added or changed, update the spec. If not, explain why.
+
+### Architect -> Orchestrator
+
+I agree with the Red Team re-review.
+
+No additional spec change is needed:
+
+- Red Team confirmed the missing proof procedure is now covered.
+- Red Team confirmed `PageProbe.js` is now correctly forbidden.
+- Red Team confirmed construction, attachment, and serialization are separated.
+- Red Team confirmed diagnostics mode wording is corrected.
+- Red Team's residual risk is already covered by the spec stop condition and the rule to leave uncertain computations unchanged.
+
+Resulting status: PASS.
+
+### Iteration 7 Spec Re-Review Closure
+
+Status: PASS.
+
+The re-review loop is valid because:
+
+- the updated spec was sent back to ScopeGuard after Architect changes;
+- the full ScopeGuard re-review is recorded;
+- Architect responded to the ScopeGuard re-review;
+- the updated spec was sent back to Red Team after Architect changes;
+- the full Red Team re-review is recorded;
+- Architect responded to the Red Team re-review.
+
+Next owner: Developer.
+
+Next step: implement the approved iteration 7 spec without changing screenshot behavior and without touching forbidden files.
+
+## Release Cleanup Iteration 7 Developer Step
+
+### Orchestrator -> Developer
+
+Implement the approved release-cleanup iteration 7 S7 spec in `project/docs/release-cleanup-iteration-7-s7.md`.
+
+Constraints:
+
+- Do not change screenshot behavior.
+- Do not use the browser.
+- Do not touch `code/manifest.json`, `code/data/icons/*`, `PageProbe.js`, Canvas modules, PositionPlanner, SplitBoundaryPlanner, FixedStickyNormalizer, QuirksLayer, LazyLoadWarmer, scroll logic, fixed/sticky logic, split/export logic, or browser permissions.
+- Use only the existing diagnostics mode: `diagnosticsMode === "qa"`.
+- If a computation cannot be proven report-only, leave it unchanged.
+- Keep repository text in English.
+- Report exactly what changed, what was inspected, and what checks were run.
+
+### Developer -> Orchestrator
+
+Implementation review result: no additional runtime patch is needed in this step.
+
+What I inspected:
+
+- `code/capture/CaptureController.js`
+- `code/capture/CaptureDiagnostics.js`
+- `code/capture/CaptureStepper.js`
+- `project/tests/validate-extension.mjs`
+
+Findings:
+
+1. Heavy image-readiness summary construction is already gated by `includeQaDiagnostics`, derived from normalized `diagnosticsMode === "qa"` in `CaptureController.js`.
+2. Repeated chrome analysis is already gated in `CaptureStepper.js` through `this.includeQaDiagnostics ? this.analyzeRepeatedChrome(frames) : null`.
+3. Production storage already goes through `CaptureDiagnostics.toProductionDiagnostics()` and the production whitelist includes only the allowed compact fields, including coarse `platformOs`.
+4. `validate-extension.mjs` already contains release guards for diagnostics mode, QA-only summaries, repeated chrome gating, coarse `platformOs`, and production stored diagnostics.
+5. Remaining per-frame fields in `CaptureStepper.js` cannot be safely proven report-only from this narrow pass without risking capture behavior, so per the S7 stop condition they were left unchanged.
+
+Files changed by this developer step:
+
+- No runtime files changed.
+- This review-log entry was added to preserve the visible orchestration trail.
+
+Checks run:
+
+- `node --check code/capture/CaptureController.js` — PASS.
+- `node --check code/capture/CaptureDiagnostics.js` — PASS.
+- `node --check code/capture/CaptureStepper.js` — PASS.
+- `node --check project/tests/validate-extension.mjs` — PASS.
+- `git diff --check` — PASS.
+
+Result:
+
+PASS with no runtime changes. Iteration 7 implementation is already satisfied by the current code shape and validation guards. The next useful step is a scoped review of this no-runtime-change conclusion, then decide whether to close iteration 7 or run broader existing checks.
+
+## Release Cleanup Iteration 7 Patch Review Loop
+
+### Orchestrator -> Architect
+
+Review this iteration 7 developer result and current diff.
+
+Artifact:
+
+- Approved spec: `project/docs/release-cleanup-iteration-7-s7.md`
+- Developer result: no runtime code patch was needed because the approved release-cleanup gating already exists in current code.
+- Current implementation evidence:
+  - `CaptureController.js` derives `includeQaDiagnostics` from normalized `diagnosticsMode === "qa"`.
+  - `CaptureController.js` calls `attachImageReadinessSummary()` only when `includeQaDiagnostics` is true.
+  - `CaptureStepper.js` gates `analyzeRepeatedChrome(frames)` behind `this.includeQaDiagnostics`.
+  - `CaptureDiagnostics.js` serializes production diagnostics through `toProductionDiagnostics()`.
+  - `validate-extension.mjs` contains guards for production whitelist, QA diagnostics mode, repeated chrome gating, coarse `platformOs`, and legacy QA alias.
+- No runtime files were changed in this step.
+- Checks run:
+  - `node --check code/capture/CaptureController.js`
+  - `node --check code/capture/CaptureDiagnostics.js`
+  - `node --check code/capture/CaptureStepper.js`
+  - `node --check project/tests/validate-extension.mjs`
+  - `git diff --check`
+
+### Architect -> Orchestrator
+
+Verdict: PASS
+
+Review:
+
+1. The developer result matches the approved iteration 7 spec. The spec explicitly says to leave uncertain computations unchanged, and the developer did that for per-frame fields that cannot be proven report-only without risking capture behavior.
+2. No forbidden runtime touch point was changed. The developer did not modify `PageProbe.js`, Canvas modules, split planning, scroll behavior, fixed/sticky behavior, export behavior, `manifest.json`, icons, or browser permissions.
+3. The current code shape is architecturally acceptable for this iteration: existing `diagnosticsMode === "qa"` remains the single switch for verbose diagnostics, while production serialization stays whitelisted.
+4. It is valid that this iteration produces no runtime patch if the desired state was already reached by prior iterations. Adding a cosmetic patch only to make a diff would increase risk and violate the small-change principle.
+5. The review-log update is acceptable as orchestration documentation, but it should not be confused with a product/runtime patch.
+
+Required changes:
+
+No required changes.
+
+Status: PASS.
+
+### Orchestrator -> Developer
+
+Look at the Architect review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer -> Orchestrator
+
+I agree with the Architect review.
+
+No code change is needed:
+
+- The reviewer confirmed the no-runtime-patch result is valid for this iteration.
+- The reviewer confirmed forbidden runtime areas were not touched.
+- The reviewer confirmed that adding a cosmetic diff would be worse than leaving already-correct code unchanged.
+
+Status: PASS with no patch changes.
+
+### Orchestrator -> ScopeGuard
+
+Review this iteration 7 developer result and current diff.
+
+Artifact:
+
+- Approved spec: `project/docs/release-cleanup-iteration-7-s7.md`
+- Developer result: no runtime code patch was needed because the approved release-cleanup gating already exists in current code.
+- Current implementation evidence:
+  - `CaptureController.js` derives `includeQaDiagnostics` from normalized `diagnosticsMode === "qa"`.
+  - `CaptureController.js` calls `attachImageReadinessSummary()` only when `includeQaDiagnostics` is true.
+  - `CaptureStepper.js` gates `analyzeRepeatedChrome(frames)` behind `this.includeQaDiagnostics`.
+  - `CaptureDiagnostics.js` serializes production diagnostics through `toProductionDiagnostics()`.
+  - `validate-extension.mjs` contains guards for production whitelist, QA diagnostics mode, repeated chrome gating, coarse `platformOs`, and legacy QA alias.
+- No runtime files were changed in this step.
+- Checks run:
+  - `node --check code/capture/CaptureController.js`
+  - `node --check code/capture/CaptureDiagnostics.js`
+  - `node --check code/capture/CaptureStepper.js`
+  - `node --check project/tests/validate-extension.mjs`
+  - `git diff --check`
+
+### ScopeGuard -> Orchestrator
+
+Verdict: PASS
+
+Scope assessment:
+
+The developer result stays inside the approved release-cleanup iteration 7 scope. No runtime capture behavior was changed, and no forbidden product areas were touched. The decision not to patch uncertain per-frame fields is correct because the spec explicitly says to leave computations unchanged unless they can be proven report-only.
+
+Architecture assessment:
+
+The current code uses the existing diagnostics path instead of creating a new flag, serializer, profiler, or parallel diagnostics engine. That is the simplest acceptable architecture. The production whitelist remains the owner of stored production diagnostics. QA-only repeated chrome analysis and image-readiness summaries are already behind QA diagnostics mode.
+
+Competitor pattern observed:
+
+Not inspected.
+
+Better alternative, if any:
+
+No better alternative for this iteration. A broader cleanup in `CaptureStepper.js` could be useful later, but it would need its own spec because it risks changing capture/runtime behavior.
+
+Required narrowing:
+
+No further narrowing required.
+
+Status: PASS.
+
+### Orchestrator -> Developer
+
+Look at the ScopeGuard review above. If you agree that anything should be changed, update the patch. If not, explain why.
+
+### Developer -> Orchestrator
+
+I agree with the ScopeGuard review.
+
+No code change is needed:
+
+- The review confirms the step stayed inside scope.
+- The review confirms no new diagnostics architecture was introduced.
+- The review confirms broader `CaptureStepper.js` cleanup should remain a future separately specified iteration.
+
+Status: PASS with no patch changes.
+
+### Iteration 7 Patch Review Closure
+
+Status: PASS.
+
+The patch review loop is valid because:
+
+- the developer result was shown;
+- Architect reviewed the result and current diff;
+- Developer responded to Architect;
+- ScopeGuard reviewed the result and current diff;
+- Developer responded to ScopeGuard;
+- no accepted review comment required code changes.
+
+Runtime code changed in iteration 7 implementation step: no.
+
+Documentation changed:
+
+- `project/docs/release-cleanup-review-log.md`
+
+Checks run:
+
+- `node --check code/capture/CaptureController.js` — PASS.
+- `node --check code/capture/CaptureDiagnostics.js` — PASS.
+- `node --check code/capture/CaptureStepper.js` — PASS.
+- `node --check project/tests/validate-extension.mjs` — PASS.
+- `git diff --check` — PASS.
