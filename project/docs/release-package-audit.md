@@ -40,3 +40,14 @@ Expected result:
 
 - `project/tests/fixtures/*.html` are small controlled test fixtures, not saved real-site dumps.
 - `project/docs/agents-and-skills/` is local workflow documentation and is intentionally outside this release-package audit.
+
+## Audit Run: 2026-05-28
+
+| Check | Result | Notes |
+| --- | --- | --- |
+| `pnpm run check` | PASS | `validate-extension.mjs` and `sticky-cleanup-smoke.mjs` passed. |
+| Manifest icon references | PASS | `manifest.json` references only existing `16`, `32`, `48`, `64`, and `128` PNG icons; action icons reference existing `16` and `32` PNG icons. |
+| Package exclusions | PASS | Tracked files contain no QA reports, golden baseline screenshots, saved HTML dumps, competitor research, or `node_modules`. |
+| Ignore rules for excluded package inputs | PASS | Placeholder paths for `node_modules`, golden baselines, saved HTML dumps, QA reports, research reports, and competitor research are ignored. |
+| macOS metadata in package root | PASS | `find code -name .DS_Store -print` returned no files. |
+| `git status --short` | PASS WITH NOTE | Only `project/docs/agents-and-skills/` remains untracked and intentionally outside this release-package audit. |
