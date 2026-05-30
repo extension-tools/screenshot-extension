@@ -6,6 +6,6 @@ Design snapshot of the current extension format-choice popup.
 - Runtime styles: `code/data/popup/index.css`
 - Snapshot preview: `popup.html`
 - Snapshot styles: `popup.css`
-- Snapshot icon: `icons/48.png`
+- Snapshot mascot: `assets/mascot-popup@2x.png`
 
 This folder is meant to preserve the reviewed visual state separately from the extension runtime code.
