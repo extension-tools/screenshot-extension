@@ -16,7 +16,7 @@ toolbar icon -> popup -> service worker -> capture controller -> content agent -
 
 ### Toolbar Action
 
-`code/manifest.json` defines a toolbar action with a minimal popup. Clicking the extension icon opens `code/data/popup/index.html`, and the popup button sends a runtime message that `code/worker.js` routes to `capture-entire`.
+`code/manifest.json` defines a toolbar action with a minimal popup. Clicking the extension icon opens `code/data/popup/index.html`, and the popup lets the user choose `Capture as PDF` or `Capture as PNG`. Both actions send a runtime message that `code/worker.js` routes to `capture-entire` with the selected `exportFormat`.
 
 ### Service Worker
 
@@ -85,8 +85,8 @@ The test layer lives in `project/tests/`:
 
 1. User clicks the toolbar icon.
 2. Chrome opens the extension popup.
-3. User clicks `Capture entire page`.
-4. Popup sends a runtime message to the service worker.
+3. User clicks `Capture as PDF` or `Capture as PNG`.
+4. Popup sends a runtime message with the selected `exportFormat` to the service worker.
 5. `QuirksLayer` runs cheap before-measure hooks for narrow exceptions and records what it applied.
 6. Service worker measures the active tab and chooses `window`, one high-confidence internal scroll target, or a known lightbox capture root.
 7. Capture layer chooses single-canvas, tiled-output, or controlled-failure strategy.

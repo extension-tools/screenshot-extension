@@ -63,11 +63,11 @@ Sites used for the decision:
 
 ## Current MVP
 
-- Popup with a single `Capture Entire Page` command.
+- Popup with explicit `Capture as PDF` and `Capture as PNG` actions.
 - Service worker orchestration.
 - Viewport-by-viewport capture through `chrome.tabs.captureVisibleTab`.
 - Canvas stitching into one image.
-- Download through Chrome downloads.
+- PDF export and PNG download through Chrome downloads.
 - Original scroll position restoration after capture finishes or fails.
 
 ## Product Task Flow

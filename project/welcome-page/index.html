@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="description" content="Take full-page screenshots in PNG or PDF">
+    <title>Screenshot Extension</title>
+    <link rel="icon" href="./assets/icon-128.png">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="welcome">
+      <header class="header">
+        <div class="brand" aria-label="Screenshot Extension">
+          <img src="./assets/icon-128.png" alt="">
+          <span>Screenshot Extension</span>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__visual" aria-hidden="true">
+          <div class="pin-guide">
+            <div class="browser-mock">
+              <div class="browser-mock__tabs">
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+                <span class="window-dot"></span>
+                <span class="tab-shape"></span>
+                <span class="new-tab-shape"></span>
+              </div>
+              <div class="browser-mock__toolbar">
+                <span class="nav-dot"></span>
+                <span class="nav-dot"></span>
+                <span class="address-bar"></span>
+                <span class="toolbar-icon toolbar-icon--extension">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9.2 4.2h3.4c.7 0 1.2.5 1.2 1.2v1.1c0 .5.4.9.9.9h1.1c1.2 0 2.2 1 2.2 2.2v2.1h-1.4a1.9 1.9 0 0 0 0 3.8H18v2.1c0 1.2-1 2.2-2.2 2.2h-2.3v-1.2a1.9 1.9 0 0 0-3.8 0v1.2H7.4c-1.2 0-2.2-1-2.2-2.2v-3h1.3a1.9 1.9 0 0 0 0-3.8H5.2V8.4c0-1.2 1-2.2 2.2-2.2h1.1c.4 0 .7-.3.7-.7V4.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="toolbar-icon toolbar-icon--pinned">
+                  <img src="./assets/icon-128.png" alt="">
+                </span>
+                <span class="menu-dots"></span>
+              </div>
+              <div class="extension-menu">
+                <div class="extension-menu__row">
+                  <span class="menu-extension-icon">
+                    <img src="./assets/icon-128.png" alt="">
+                  </span>
+                  <span class="menu-extension-line"></span>
+                  <span class="pin-button">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M9.2 4.3h5.6l-.8 5 3.2 3.3v1.7H6.8v-1.7L10 9.3l-.8-5Z" fill="currentColor"/>
+                      <path d="M12 14.1v5.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                </div>
+                <div class="extension-menu__footer"></div>
+              </div>
+              <span class="guide-ring guide-ring--extension"></span>
+              <span class="guide-ring guide-ring--pin"></span>
+              <span class="guide-arrow guide-arrow--extension"></span>
+              <span class="guide-arrow guide-arrow--pin"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero__copy">
+          <h1 id="hero-title">Take full-page screenshots in PNG or PDF</h1>
+          <p>Pin Screenshot Extension to your Chrome toolbar for quick access.</p>
+        </div>
+      </section>
+
+      <section class="steps">
+        <article>
+          <p>Click the Extensions icon</p>
+        </article>
+        <article>
+          <p>Click the pin icon next to Screenshot Extension</p>
+        </article>
+        <article>
+          <p>Click the Screenshot Extension icon to take a screenshot</p>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>Choose your format before capturing.</p>
+      </footer>
+    </main>
+  </body>
+</html>

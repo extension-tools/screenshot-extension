@@ -14,9 +14,11 @@
 - [ ] Open a normal `https://` page.
 - [ ] Click the extension icon.
 - [ ] Confirm the toolbar icon opens a popup.
-- [ ] Confirm the popup button says `Capture entire page`.
-- [ ] Confirm clicking the popup button starts capture.
-- [ ] Confirm an image downloads.
+- [ ] Confirm the popup shows `Capture as PDF` and `Capture as PNG`.
+- [ ] Confirm clicking `Capture as PNG` starts capture.
+- [ ] Confirm a PNG image downloads.
+- [ ] Confirm clicking `Capture as PDF` starts capture.
+- [ ] Confirm a PDF file downloads.
 - [ ] Confirm the image contains more than the visible viewport on a long page.
 - [ ] Confirm the page returns to its original scroll position.
 

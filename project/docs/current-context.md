@@ -43,6 +43,7 @@ Screenshot Extension is a Chrome MV3 extension for one-click full-page capture f
 | Text/cards are cut inside a screenshot. | Split-boundary / seam placement across text, docs cards, product cards, or product-grid rows. | FastAPI, MongoDB, Patagonia, Nordstrom, Samsung, REI, Target, Walmart. | Must |
 | Product cards are cut between PNG parts. | Tiled-output boundary lands inside product card/grid row. | REI, Target, Walmart. | Must |
 | User does not understand capture progress/result. | Capture progress, notification, completion feedback. | Product/UI. | Must |
+| Capture should be faster after release. | [Speed target: reduce average PNG full-page capture from 19s to 14s](../product-tasks/034-speed-to-14s.md) on the existing benchmark set without reducing visual quality. | Competitor benchmark set; FireShot, GoFullPage, Easy Screenshot controls. | Must after release |
 | User needs PDF export. | PDF export pipeline, page sizing, output fidelity. | Export. | Must |
 | Popup duplicates in capture. | Repeated popup/modal overlay normalization. | Patagonia. | Nice to have |
 | First viewport is dimmed, but later frames become light/white while a popup is active. | Dimmed backdrop continuity / modal overlay state mismatch. | Samsung. | Nice to have |

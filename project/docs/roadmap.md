@@ -8,7 +8,7 @@
 - Remove external editor integration.
 - Validate manifest and JavaScript syntax.
 - Load unpacked in Chrome.
-- Start capture from a one-button toolbar popup.
+- Start capture from a toolbar popup with explicit PDF/PNG format choice.
 - Capture and download full-page screenshots on basic websites.
 
 ## Phase 2: Capture Reliability
@@ -56,10 +56,50 @@
 - PDF export built on the same capture tiles/bitmaps and diagnostics.
 - Chrome Web Store packaging preparation.
 
+## Speed Roadmap: 19s -> 14s Average
+
+Goal: make Screenshot Extension finish PNG full-page capture in **14s average** on the existing competitor benchmark set while keeping excellent visual quality.
+
+Benchmark status is already known and does not need a separate discovery phase:
+
+| Extension | Current average | OK | Failed | Endpoint |
+| --- | ---: | ---: | ---: | --- |
+| Screenshot Extension | 19s | 87 | 13 | PNG download |
+| GoFullPage | 17s | 93 | 7 | result page `capture.html` |
+| FireShot | 19s | 97 | 3 | result page `fsCaptured.html` |
+| Easy Screenshot | 15s | 87 | 13 | PNG download |
+
+Target: **14s average** with quality staying closer to FireShot/GoFullPage than to a brittle fast path.
+
+| Stage | Work | Expected speed gain | Expected average after stage | Quality rule |
+| --- | --- | ---: | ---: | --- |
+| 1 | Replace long lazy warmup default with fast warmup bounce: scroll to deepest planned position, immediately restore, wait briefly only after restore. Keep skip guards for viewport-only, short pages, blocking modals, and unstable pages. | 1.8-2.4s | 16.6-17.2s | Do not remove lazy protection; make the normal path faster and keep slow fallback for risky pages. |
+| 2 | Make per-frame waits adaptive: reduce fixed `delay`, first-frame settle, stabilization, and image-readiness waits when the current viewport is already stable and images are ready. | 1.2-1.8s | 14.8-16.0s | Never skip waits when pending images, placeholder blocks, scroll mismatch, modal risk, or layout movement is detected. |
+| 3 | Reduce duplicate pre-capture work: avoid redundant page probes / image-readiness collection when warmup was skipped or produced no page growth; reuse measured state where safe. | 0.5-0.8s | 14.0-15.5s | Re-probe remains mandatory after actual warmup, internal scroll target changes, or risk-policy changes. |
+| 4 | Speed up output/export path: avoid unnecessary download-completion blocking in the user-visible success path, and keep completion lifecycle in diagnostics. | 0.3-0.6s | 13.7-15.2s | User must still get a real PNG download, not only an opened result page. |
+| 5 | Tune thresholds against the existing benchmark and lock defaults: set production defaults for 14s target, keep quality fallback for hard pages, then update regression fixtures. | 0.2-0.5s | 13.2-14.8s | If a site needs more time to avoid a bad screenshot, quality wins over forcing 14s on that single case. |
+
+Recommended implementation order:
+
+1. Ship Stage 1 first because it removes the largest obvious fixed cost.
+2. Ship Stage 2 next because current capture cost scales with every frame.
+3. Ship Stages 3-4 only after timing diagnostics confirm where the remaining seconds are.
+4. Use Stage 5 to freeze defaults and prevent future quality regressions.
+
+Success bar:
+
+| Metric | Required result |
+| --- | --- |
+| Average time | 14s target on the existing benchmark set |
+| Endpoint | PNG download stays the product endpoint |
+| OK / Failed | Must not get worse than current 87 / 13; preferred target is 93+ OK |
+| Quality | No new obvious blank areas, repeated sticky chrome, missing footer, or broken first viewport |
+
 ## Current Prioritized Capture Backlog
 
 | Priority | User-visible problem | Technical area | Control sites / examples |
 | --- | --- | --- | --- |
+| Must after release | Screenshot Extension is slower than the product target. | [Speed roadmap](../product-tasks/034-speed-to-14s.md): fast warmup bounce, adaptive per-frame waits, reduced duplicate probes, and faster export completion. Target average: 19s -> 14s. | Existing competitor benchmark set |
 | Must | Text, docs cards, product cards, or product-grid rows are cut inside the screenshot. | Split-boundary / seam placement; protect text blocks, docs-card blocks, product-card blocks, and product-grid rows. | FastAPI Docs, MongoDB Docs, Patagonia Jackets, Nordstrom Shoes, Samsung Galaxy S, REI Backpacks, Target Backpacks, Walmart Laptops |
 | Must | Product cards are cut between multi-part PNG files. | Tiled-output boundary; part 01 / part 02 boundary must avoid product card and product-grid row interiors. | REI Backpacks, Target Backpacks, Walmart Laptops |
 | Must | User does not understand whether capture is running, done, or saved. | Capture progress, user notification, completion feedback state. | Product-wide |
