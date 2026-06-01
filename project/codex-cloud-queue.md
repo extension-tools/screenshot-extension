@@ -1,5 +1,17 @@
 # Codex Cloud Queue
 
+## Product Approval
+
+Approved first cloud queue on 2026-06-01:
+
+1. Read-only roadmap orientation.
+2. Speed timing report.
+3. Capture progress product/tech spec.
+4. Product-card seam fixture spec.
+5. AGENTS/queue hygiene.
+
+PDF export QA is intentionally not included in this first five-task queue.
+
 ## Global Rule
 
 Do tasks one by one unless explicitly told to parallelize.
