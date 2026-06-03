@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Screenshot Extension</title>
+    <style>
+      :root {
+        --page-bg: #cde1ff;
+        --ink: #021c3f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        background: rgb(205, 225, 255);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      .page {
+        min-height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: clamp(32px, 8vh, 88px) 24px 24px;
+        background: var(--page-bg);
+      }
+
+      h1 {
+        max-width: 1120px;
+        margin: 0;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: clamp(36px, 7vw, 96px);
+        font-style: normal;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        line-height: 1.05;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1>Take full-page screenshots as a PNG or PDF</h1>
+    </main>
+  </body>
+</html>
