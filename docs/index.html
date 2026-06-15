@@ -13,6 +13,7 @@
         --page-bg: #ffffff;
         --ink: #032048;
         --muted: #5a6d8f;
+        --muted-strong: #435a7a;
         --image-shadow: 0 20px 60px rgba(15, 23, 42, 0.1);
       }
 
@@ -46,8 +47,8 @@
 
       h1 {
         margin: 0 0 18px;
-        font-size: clamp(34px, 4.4vw, 56px);
-        font-weight: 750;
+        font-size: clamp(31px, 3.7vw, 46px);
+        font-weight: 800;
         line-height: 1.08;
         letter-spacing: 0;
       }
@@ -57,18 +58,22 @@
         display: block;
       }
 
+      .headline-keep {
+        white-space: nowrap;
+      }
+
       .headline-sub {
-        margin-top: 10px;
-        color: var(--muted);
-        font-size: clamp(24px, 3vw, 38px);
-        font-weight: 650;
+        margin-top: 8px;
+        color: var(--muted-strong);
+        font-size: clamp(23px, 2.7vw, 34px);
+        font-weight: 750;
         line-height: 1.14;
       }
 
       .step {
         max-width: 360px;
         margin: 0 auto 22px;
-        color: var(--muted);
+        color: var(--ink);
         font-size: clamp(18px, 2vw, 22px);
         font-weight: 500;
         line-height: 1.45;
@@ -88,6 +93,12 @@
         margin-bottom: 0;
       }
 
+      .shot--crop-bottom {
+        height: min(calc((100vw - 30px) * 0.51), 184px);
+        object-fit: cover;
+        object-position: top center;
+      }
+
       @media (min-width: 768px) {
         .intro {
           max-width: 760px;
@@ -99,6 +110,11 @@
 
         .shot {
           width: min(75.85vw, 910px);
+        }
+
+        .shot--crop-bottom {
+          height: min(38.7vw, 464px);
+          margin-bottom: 44px;
         }
       }
 
@@ -127,7 +143,7 @@
     <main class="page">
       <section class="intro" aria-labelledby="welcome-title">
         <h1 id="welcome-title">
-          <span class="headline-main">Screenshot Extension installed! 🎉</span>
+          <span class="headline-main">Screenshot Extension <span class="headline-keep">installed! 🎉</span></span>
           <span class="headline-sub">Here's how to get started.</span>
         </h1>
       </section>
@@ -136,7 +152,7 @@
         Click the puzzle piece (1) in the top right of your browser. Then, click the little pin (2) next to the extension:
       </p>
       <img
-        class="shot"
+        class="shot shot--crop-bottom"
         src="assets/pin-extension.png"
         alt="Pin Screenshot Extension in the Chrome extensions menu"
         width="2600"
@@ -147,7 +163,7 @@
         That's it! Click the icon (3) on any page to use it.
       </p>
       <img
-        class="shot"
+        class="shot shot--crop-bottom"
         src="assets/open-extension.png"
         alt="Open Screenshot Extension from the browser toolbar"
         width="2600"
