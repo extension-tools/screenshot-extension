@@ -16,9 +16,13 @@ const assert = (condition, message) => {
 const expectedCopy = [
   'Screenshot Extension 설치가 끝났어요! 🎉',
   '이렇게 시작해 보세요.',
-  '브라우저 오른쪽 위에 있는 퍼즐 모양 아이콘(1)을 클릭하세요.',
-  '그런 다음, 확장 프로그램 옆에 있는 고정 핀(2)을 클릭하세요:',
-  '이게 전부예요! 이제 어느 페이지에서든 아이콘(3)을 클릭하면 바로 사용할 수 있어요.'
+  '브라우저 오른쪽 위에 있는',
+  '퍼즐 모양 아이콘(1)을',
+  '고정 아이콘(2)을',
+  '클릭해 확장 프로그램을 고정하세요.',
+  '이게 전부예요! 이제 어느 페이지에서든',
+  '아이콘(3)을',
+  '클릭하면 바로 사용할 수 있어요.'
 ];
 
 assert(/<html\s+lang="ko">/.test(html), 'Korean welcome page must declare lang="ko"');
@@ -31,10 +35,27 @@ for (const text of expectedCopy) {
   assert(html.includes(text), `Korean welcome page is missing approved copy: ${text}`);
 }
 
+for (const protectedFragment of [
+  '<span class="keep-together">퍼즐 모양 아이콘(1)을</span>',
+  '<span class="step-transition">그런 다음, <span class="keep-together">고정 아이콘(2)을</span></span>',
+  '<span class="keep-together">아이콘(3)을</span>'
+]) {
+  assert(
+    html.includes(protectedFragment),
+    `Korean welcome page must preserve the approved line-break protection: ${protectedFragment}`
+  );
+}
+
+assert(
+  /@media\s*\(min-width:\s*768px\)[\s\S]*?\.step-transition\s*\{\s*white-space:\s*nowrap;\s*\}/.test(html),
+  'Korean welcome page must keep the transition and pin label together on wide screens'
+);
+
 for (const oldSourceText of [
   "Here's how to get started.",
   'Click the puzzle-shaped icon (1) at the top right of your browser.',
-  "That's it! Now on any page, click the icon (3) and you're ready to go."
+  "That's it! Now on any page, click the icon (3) and you're ready to go.",
+  '고정 핀(2)을 클릭하세요:'
 ]) {
   assert(!html.includes(oldSourceText), `Korean welcome page still contains English source copy: ${oldSourceText}`);
 }
